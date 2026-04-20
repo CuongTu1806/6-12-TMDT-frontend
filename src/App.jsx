@@ -1,0 +1,734 @@
+import { useEffect, useMemo, useState } from 'react'
+import { login, register } from './services/authApi'
+import {
+  getAllCategories,
+  getProductsByCategory,
+  getVisibleProducts,
+} from './services/catalogApi'
+import { CategoryPage } from './pages/CategoryPage'
+import { SellerPage } from './pages/SellerPage'
+
+const STORAGE_KEY = 'tmdt-auth-session'
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveSession(session) {
+  if (!session) {
+    localStorage.removeItem(STORAGE_KEY)
+    return
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+}
+
+const PRODUCT_PAGE_SIZE = 12
+
+function InputField({
+  label,
+  name,
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+      />
+    </label>
+  )
+}
+
+function App() {
+  const [authMode, setAuthMode] = useState('login')
+  const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState({ type: 'idle', text: '' })
+  const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const [session, setSession] = useState(() => loadSession())
+  const [categories, setCategories] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState({ id: null, name: 'Tat ca' })
+  const [products, setProducts] = useState([])
+  const [featuredProducts, setFeaturedProducts] = useState([])
+  const [isProductsLoading, setIsProductsLoading] = useState(false)
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(false)
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false)
+  
+  // Page navigation
+  const [currentPage, setCurrentPage] = useState('home') // 'home' or 'category'
+  const [selectedCategoryForPage, setSelectedCategoryForPage] = useState(null)
+
+  const [loginForm, setLoginForm] = useState({
+    loginKey: '',
+    password: '',
+  })
+
+  const [registerForm, setRegisterForm] = useState({
+    username: '',
+    password: '',
+    email: '',
+    fullName: '',
+    phone: '',
+  })
+
+  const hasSellerAccess = useMemo(() => {
+    const roles = session?.roles || []
+    return roles.some((r) => ['SELLER', 'ADMIN', 'ROLE_SELLER', 'ROLE_ADMIN'].includes(r))
+  }, [session])
+
+  useEffect(() => {
+    console.log('Products length:', products.length)
+    console.log('isProductsLoading:', isProductsLoading)
+  }, [products, isProductsLoading])
+
+
+
+  const categoryTree = useMemo(() => {
+    const roots = categories.filter((category) => category.parentId == null)
+    const childMap = categories.reduce((acc, category) => {
+      if (category.parentId == null) {
+        return acc
+      }
+      if (!acc[category.parentId]) {
+        acc[category.parentId] = []
+      }
+      acc[category.parentId].push(category)
+      return acc
+    }, {})
+
+    return { roots, childMap }
+  }, [categories])
+
+  useEffect(() => {
+    const initCatalog = async () => {
+      setIsCategoriesLoading(true)
+      setIsProductsLoading(true)
+
+      try {
+        const [categoryData, productData] = await Promise.all([
+          getAllCategories(),
+          getVisibleProducts(0, PRODUCT_PAGE_SIZE),
+        ])
+        setCategories(categoryData)
+        setProducts(productData.content || [])
+        setFeaturedProducts(productData.content || [])
+      } catch (error) {
+        updateToast('error', error.message || 'Khong tai duoc du lieu trang chu')
+      } finally {
+        setIsCategoriesLoading(false)
+        setIsProductsLoading(false)
+      }
+    }
+
+    initCatalog()
+  }, [])
+
+  const formatPrice = (price) => `${Number(price || 0).toLocaleString('vi-VN')}d`
+
+  const loadProductsForCategory = async (categoryId, categoryName) => {
+    console.log('Loading products for category:', categoryId, categoryName)
+    // Navigate to category page instead of showing inline
+    setSelectedCategoryForPage({ id: categoryId, name: categoryName })
+    setCurrentPage('category')
+    setIsCategoryMenuOpen(false)
+  }
+
+  const updateToast = (type, text) => {
+    setToast({ type, text })
+    window.setTimeout(() => {
+      setToast((prev) => (prev.text === text ? { type: 'idle', text: '' } : prev))
+    }, 3000)
+  }
+
+  const handleLoginChange = (event) => {
+    const { name, value } = event.target
+    setLoginForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleRegisterChange = (event) => {
+    const { name, value } = event.target
+    setRegisterForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleLogin = async (event) => {
+    event.preventDefault()
+
+    if (!loginForm.loginKey || !loginForm.password) {
+      updateToast('error', 'Vui long nhap day du thong tin dang nhap')
+      return
+    }
+
+    setLoading(true)
+    setToast({ type: 'idle', text: '' })
+
+    try {
+      const response = await login(loginForm)
+      const loginData = response.result
+      saveSession(loginData)
+      setSession(loginData)
+      updateToast('success', response.message || 'Dang nhap thanh cong')
+      setIsAuthOpen(false)
+      setLoginForm((prev) => ({ ...prev, password: '' }))
+    } catch (error) {
+      updateToast('error', error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRegister = async (event) => {
+    event.preventDefault()
+
+    if (registerForm.username.length < 4) {
+      updateToast('error', 'Username phai tu 4 ky tu')
+      return
+    }
+
+    if (registerForm.password.length < 6) {
+      updateToast('error', 'Password phai tu 6 ky tu')
+      return
+    }
+
+    if (!registerForm.email.includes('@')) {
+      updateToast('error', 'Email khong hop le')
+      return
+    }
+
+    setLoading(true)
+    setToast({ type: 'idle', text: '' })
+
+    try {
+      const response = await register(registerForm)
+      updateToast('success', response.message || 'Dang ky thanh cong, moi dang nhap')
+      setAuthMode('login')
+      setLoginForm((prev) => ({ ...prev, loginKey: registerForm.username }))
+      setRegisterForm({
+        username: '',
+        password: '',
+        email: '',
+        fullName: '',
+        phone: '',
+      })
+    } catch (error) {
+      updateToast('error', error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openAuth = (nextMode = 'login') => {
+    setAuthMode(nextMode)
+    setIsAuthOpen(true)
+  }
+
+  const closeAuth = () => setIsAuthOpen(false)
+
+  const handleProtectedAction = () => {
+    if (!session?.token) {
+      updateToast('error', 'Ban can dang nhap de mua hang')
+      openAuth('login')
+      return
+    }
+    updateToast('success', 'San pham da duoc them vao gio (demo)')
+  }
+
+  const handleLogoutLocal = () => {
+    saveSession(null)
+    setSession(null)
+    updateToast('success', 'Dang xuat thanh cong')
+  }
+
+  // Render category page or seller page or home page
+  if (currentPage === 'category' && selectedCategoryForPage) {
+    return (
+      <CategoryPage
+        categoryId={selectedCategoryForPage.id}
+        categoryName={selectedCategoryForPage.name}
+        onBack={() => setCurrentPage('home')}
+        session={session}
+        categories={categories}
+        onProtectedAction={handleProtectedAction}
+        onNavigateCategory={(id, name) => setSelectedCategoryForPage({ id, name })}
+        onLogout={handleLogoutLocal}
+        onOpenLogin={() => openAuth('login')}
+        onGoSeller={() => setCurrentPage('seller')}
+      />
+    )
+  }
+
+  if (currentPage === 'seller') {
+    return (
+      <SellerPage
+        session={session}
+        onLogout={handleLogoutLocal}
+      />
+    )
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f2f4f8] font-sans text-slate-900">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-extrabold tracking-tight text-blue-600">
+            <span className="inline-block rounded-md bg-blue-100 px-2 py-1">M</span>
+            Marketplace Pro
+          </div>
+          <nav className="hidden items-center gap-4 text-sm text-slate-600 md:flex">
+            <a href="#" className="text-slate-900">Home</a>
+            <div
+              className="relative"
+              onMouseEnter={() => setIsCategoryMenuOpen(true)}
+              onMouseLeave={() => setIsCategoryMenuOpen(false)}
+            >
+              <button
+                type="button"
+                className="text-slate-600 transition hover:text-slate-900"
+              >
+                Categories
+              </button>
+              {isCategoryMenuOpen && (
+                <div className="absolute left-0 top-full w-[560px]">
+                  <div className="pointer-events-none h-2" />
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                        Danh muc san pham
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => loadProductsForCategory(null, 'Tat ca')}
+                        className="text-xs font-semibold text-blue-600"
+                      >
+                        Tat ca
+                      </button>
+                    </div>
+                    <div className="grid max-h-72 gap-4 overflow-y-auto md:grid-cols-2">
+                      {categoryTree.roots.map((rootCategory) => (
+                        <div key={rootCategory.categoryId} className="rounded-xl bg-slate-50 p-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              loadProductsForCategory(rootCategory.categoryId, rootCategory.categoryName)
+                            }
+                            className="text-sm font-bold text-slate-900 hover:text-blue-600"
+                          >
+                            {rootCategory.categoryName}
+                          </button>
+                          <div className="mt-2 space-y-1">
+                            {(categoryTree.childMap[rootCategory.categoryId] || []).map((childCategory) => (
+                              <button
+                                key={childCategory.categoryId}
+                                type="button"
+                                onClick={() =>
+                                  loadProductsForCategory(
+                                    childCategory.categoryId,
+                                    childCategory.categoryName,
+                                  )
+                                }
+                                className="block text-left text-xs text-slate-600 transition hover:text-blue-600"
+                              >
+                                {childCategory.categoryName}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <a href="#">Deals</a>
+          </nav>
+          <div className="hidden flex-1 md:block">
+            <input
+              type="text"
+              placeholder="Search products, brands..."
+              className="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="ml-auto flex items-center gap-3 text-sm">
+            {session?.username ? (
+              <>
+                <span className="hidden text-slate-600 sm:inline">Hi, {session.username}</span>
+                {hasSellerAccess && (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage('seller')}
+                    className="rounded-full border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                  >
+                    Quan ly shop
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleLogoutLocal}
+                  className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold"
+                >
+                  Dang xuat
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openAuth('login')}
+                className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700"
+              >
+                Dang nhap
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleProtectedAction}
+              className="rounded-full border border-slate-200 p-2"
+              aria-label="Open cart"
+            >
+              🛒
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-2 lg:items-center">
+        <div>
+          <p className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+            Xu the cong nghe 2026
+          </p>
+          <h1 className="mt-4 font-['Be_Vietnam_Pro',_sans-serif] text-4xl font-extrabold leading-tight text-slate-900 md:text-5xl">
+            Nang Tam Phong
+            <span className="block text-blue-600">Cach Song Hien Dai</span>
+          </h1>
+          <p className="mt-4 max-w-md text-slate-600">
+            Kham pha bo suu tap thiet bi thong minh va phu kien cao cap tai Marketplace Pro.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleProtectedAction}
+              className="rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-300/70 transition hover:-translate-y-0.5"
+            >
+              Mua sam ngay
+            </button>
+            <button
+              type="button"
+              className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold"
+            >
+              Tim hieu them
+            </button>
+          </div>
+          <div className="mt-8 flex gap-8">
+            <div>
+              <p className="text-3xl font-extrabold">50k+</p>
+              <p className="text-xs text-slate-500">San pham</p>
+            </div>
+            <div>
+              <p className="text-3xl font-extrabold">12k+</p>
+              <p className="text-xs text-slate-500">Thuong hieu</p>
+            </div>
+            <div>
+              <p className="text-3xl font-extrabold">4.9/5</p>
+              <p className="text-xs text-slate-500">Danh gia</p>
+            </div>
+          </div>
+        </div>
+        <div className="relative mx-auto w-full max-w-lg overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 p-6 text-white shadow-xl">
+          <div className="h-[280px] rounded-2xl border border-white/20 bg-white/10" />
+          <p className="mt-4 text-sm text-white/80">Khung hero product (chua can hinh anh)</p>
+          <div className="pointer-events-none absolute -right-10 -top-8 h-36 w-36 rounded-full bg-blue-500/40 blur-3xl" />
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-xl font-extrabold">Danh muc noi bat</h2>
+            <button
+              type="button"
+              onClick={() => loadProductsForCategory(null, 'Tat ca')}
+              className="text-sm font-semibold text-blue-600"
+            >
+              Xem tat ca
+            </button>
+          </div>
+          <div className="grid grid-cols-4 gap-3 md:grid-cols-8">
+            {isCategoriesLoading ? (
+              <p className="col-span-full text-sm text-slate-500">Dang tai danh muc...</p>
+            ) : null}
+            {categories.map((category) => (
+              <button
+                key={category.categoryId}
+                type="button"
+                onClick={() => loadProductsForCategory(category.categoryId, category.categoryName)}
+                className="group rounded-2xl p-2 text-center"
+              >
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl transition group-hover:bg-blue-100">
+                  •
+                </span>
+                <span className="mt-2 block text-xs font-medium text-slate-600">{category.categoryName}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-10">
+        <div className="relative overflow-hidden rounded-2xl bg-blue-600 px-8 py-8 text-white">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">Flash sale cuoi tuan</p>
+          <h3 className="mt-3 text-3xl font-black">Giam den 50% cho phu kien cong nghe chinh hang</h3>
+          <button
+            type="button"
+            onClick={handleProtectedAction}
+            className="mt-5 rounded-full bg-white px-5 py-2 text-sm font-bold text-blue-700"
+          >
+            Nhan uu dai ngay
+          </button>
+          <div className="pointer-events-none absolute -right-7 -top-7 h-44 w-44 rounded-full border-8 border-white/20" />
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-10">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-xl font-extrabold">San pham goi y</h2>
+          <button
+            type="button"
+            onClick={() => loadProductsForCategory(null, 'Tat ca')}
+            className="text-sm font-semibold text-blue-600"
+          >
+            Tai lai
+          </button>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {featuredProducts.slice(0, 4).map((item) => (
+            <article key={item.productId} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <div className="h-40 overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200">
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.productName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
+              <span className="mt-3 inline-block rounded-full bg-blue-100 px-2 py-1 text-[10px] font-bold uppercase text-blue-700">
+                {item.categoryName || 'Goi y'}
+              </span>
+              <h3 className="mt-2 line-clamp-2 min-h-[40px] text-sm font-semibold">{item.productName}</h3>
+              <p className="mt-2 text-lg font-extrabold">{formatPrice(item.price)}</p>
+              <button
+                type="button"
+                onClick={handleProtectedAction}
+                className="mt-3 w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
+              >
+                Mua ngay
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-6 text-sm md:grid-cols-4">
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="font-bold">Giao hang mien phi</p>
+            <p className="text-slate-600">Don tu 500k toan quoc.</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="font-bold">Bao hanh chinh hang</p>
+            <p className="text-slate-600">Doi tra trong 7 ngay.</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="font-bold">Doi tra de dang</p>
+            <p className="text-slate-600">Thu tuc gon va nhanh.</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <p className="font-bold">Thanh toan an toan</p>
+            <p className="text-slate-600">Nhieu phuong thuc linh hoat.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-14 text-center">
+        <h2 className="font-['Be_Vietnam_Pro',_sans-serif] text-3xl font-black">Dang ky nhan ban tin</h2>
+        <p className="mx-auto mt-3 max-w-xl text-slate-600">
+          Cap nhat uu dai moi nhat va xu huong san pham hot moi tuan.
+        </p>
+        <form className="mx-auto mt-6 flex max-w-md flex-col gap-2 sm:flex-row">
+          <input
+            type="email"
+            placeholder="Dia chi email cua ban"
+            className="flex-1 rounded-full border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+          />
+          <button type="button" className="rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white">
+            Dang ky
+          </button>
+        </form>
+      </section>
+
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-10 text-sm text-slate-600">
+          <div className="grid gap-8 md:grid-cols-4">
+            <div>
+              <p className="text-base font-extrabold text-blue-600">Marketplace Pro</p>
+              <p className="mt-3">Nen tang mua sam online cho phong cach song hien dai.</p>
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">Shopping</p>
+              <ul className="mt-3 space-y-2">
+                <li>Browse products</li>
+                <li>Featured categories</li>
+                <li>Special offers</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">Company</p>
+              <ul className="mt-3 space-y-2">
+                <li>About us</li>
+                <li>Terms of service</li>
+                <li>Privacy policy</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">Contact</p>
+              <ul className="mt-3 space-y-2">
+                <li>support@marketplacepro.com</li>
+                <li>+84 555 000 000</li>
+                <li>123 E Commerce Way</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+      {isAuthOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-extrabold text-slate-900">
+                {authMode === 'login' ? 'Dang nhap' : 'Dang ky'}
+              </h3>
+              <button type="button" onClick={closeAuth} className="rounded-full border px-3 py-1 text-sm">
+                Dong
+              </button>
+            </div>
+
+            <div className="mt-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-sm">
+              <button
+                type="button"
+                onClick={() => setAuthMode('login')}
+                className={`rounded-md px-3 py-1.5 font-semibold ${
+                  authMode === 'login' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                }`}
+              >
+                Dang nhap
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('register')}
+                className={`rounded-md px-3 py-1.5 font-semibold ${
+                  authMode === 'register' ? 'bg-blue-600 text-white' : 'text-slate-600'
+                }`}
+              >
+                Dang ky
+              </button>
+            </div>
+
+            {authMode === 'login' ? (
+              <form className="mt-5 space-y-3" onSubmit={handleLogin}>
+                <InputField
+                  label="Tai khoan"
+                  name="loginKey"
+                  value={loginForm.loginKey}
+                  onChange={handleLoginChange}
+                  placeholder="username, email hoac sdt"
+                />
+                <InputField
+                  label="Mat khau"
+                  name="password"
+                  type="password"
+                  value={loginForm.password}
+                  onChange={handleLoginChange}
+                  placeholder="nhap mat khau"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
+                >
+                  {loading ? 'Dang xu ly...' : 'Dang nhap'}
+                </button>
+              </form>
+            ) : (
+              <form className="mt-5 space-y-3" onSubmit={handleRegister}>
+                <InputField
+                  label="Username"
+                  name="username"
+                  value={registerForm.username}
+                  onChange={handleRegisterChange}
+                  placeholder="tu 4 den 20 ky tu"
+                />
+                <InputField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={registerForm.email}
+                  onChange={handleRegisterChange}
+                  placeholder="abc@gmail.com"
+                />
+                <InputField
+                  label="Ho va ten"
+                  name="fullName"
+                  value={registerForm.fullName}
+                  onChange={handleRegisterChange}
+                  placeholder="Nguyen Van A"
+                />
+                <InputField
+                  label="So dien thoai"
+                  name="phone"
+                  value={registerForm.phone}
+                  onChange={handleRegisterChange}
+                  placeholder="10-11 so"
+                />
+                <InputField
+                  label="Mat khau"
+                  name="password"
+                  type="password"
+                  value={registerForm.password}
+                  onChange={handleRegisterChange}
+                  placeholder="toi thieu 6 ky tu"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white disabled:opacity-60"
+                >
+                  {loading ? 'Dang xu ly...' : 'Tao tai khoan'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {toast.type !== 'idle' ? (
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border bg-white px-4 py-3 text-sm shadow-xl">
+          <p className={toast.type === 'success' ? 'text-emerald-700' : 'text-rose-700'}>{toast.text}</p>
+        </div>
+      ) : null}
+    </main>
+  )
+}
+
+export default App
