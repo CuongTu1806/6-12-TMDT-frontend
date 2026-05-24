@@ -31,8 +31,28 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
 
   useEffect(() => {
     if (product) {
-      setFormData(product)
-      setVariants(product.variants || [])
+      let skuCode = product.skuCode || ''
+      let variants = product.variants || []
+      if (!skuCode && product.attributes) {
+        try {
+          const attrs = typeof product.attributes === 'string' ? JSON.parse(product.attributes) : product.attributes
+          skuCode = attrs?.skuCode || ''
+          variants = attrs?.variants || []
+        } catch {
+          /* ignore */
+        }
+      }
+      setFormData({
+        productName: product.productName || '',
+        categoryId: product.categoryId || '',
+        description: product.description || '',
+        price: product.price || 0,
+        stockQuantity: product.stockQuantity || 0,
+        skuCode,
+        imageUrl: product.imageUrl || '',
+        originalPrice: product.originalPrice || 0,
+      })
+      setVariants(variants)
     } else {
       setFormData({
         productName: '',

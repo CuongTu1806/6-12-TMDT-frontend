@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { searchProducts, getAllCategories } from '../services/catalogApi'
 import { Grid3x3, List, ChevronDown } from 'lucide-react'
+import { MarketHeader } from '../components/MarketHeader'
+import { ProductCard } from '../components/ProductCard'
 
 const PRODUCT_PAGE_SIZE = 20
 
@@ -9,12 +11,17 @@ export function CategoryPage({
   categoryName,
   onBack,
   session,
+  cartCount,
   categories: headerCategories,
-  onProtectedAction,
   onNavigateCategory,
   onLogout,
-  onOpenLogin,
-  onGoSeller,
+  onOpenAuth,
+  onGoHome,
+  onOpenCart,
+  onOpenOrders,
+  onOpenSeller,
+  onOpenProduct,
+  onAddToCart,
 }) {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -124,11 +131,6 @@ export function CategoryPage({
     return { roots, childMap }
   }, [headerCategories, categories])
 
-  const hasSellerAccess = useMemo(() => {
-    const roles = session?.roles || []
-    return roles.some((r) => ['SELLER', 'ADMIN', 'ROLE_SELLER', 'ROLE_ADMIN'].includes(r))
-  }, [session])
-
   const FilterSection = ({ title, children, section }) => (
     <div className="border-b pb-4">
       <button
@@ -147,124 +149,16 @@ export function CategoryPage({
 
   return (
     <div className="min-h-screen bg-[#f2f4f8]">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-2 text-sm font-extrabold tracking-tight text-blue-600"
-          >
-            <span className="inline-block rounded-md bg-blue-100 px-2 py-1">M</span>
-            Marketplace Pro
-          </button>
-          <nav className="hidden items-center gap-4 text-sm text-slate-600 md:flex">
-            <button type="button" onClick={onBack} className="text-slate-900">Home</button>
-            <div
-              className="relative"
-              onMouseEnter={() => setIsCategoryMenuOpen(true)}
-              onMouseLeave={() => setIsCategoryMenuOpen(false)}
-            >
-              <button
-                type="button"
-                className="text-slate-600 transition hover:text-slate-900"
-              >
-                Categories
-              </button>
-              {isCategoryMenuOpen && (
-                <div className="absolute left-0 top-full w-[560px]">
-                  <div className="pointer-events-none h-2" />
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-                        Danh muc san pham
-                      </p>
-                    </div>
-                    <div className="grid max-h-72 gap-4 overflow-y-auto md:grid-cols-2">
-                      {categoryTree.roots.map((rootCategory) => (
-                        <div key={rootCategory.categoryId} className="rounded-xl bg-slate-50 p-3">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              onNavigateCategory?.(rootCategory.categoryId, rootCategory.categoryName)
-                            }
-                            className="text-sm font-bold text-slate-900 hover:text-blue-600"
-                          >
-                            {rootCategory.categoryName}
-                          </button>
-                          <div className="mt-2 space-y-1">
-                            {(categoryTree.childMap[rootCategory.categoryId] || []).map((childCategory) => (
-                              <button
-                                key={childCategory.categoryId}
-                                type="button"
-                                onClick={() =>
-                                  onNavigateCategory?.(
-                                    childCategory.categoryId,
-                                    childCategory.categoryName,
-                                  )
-                                }
-                                className="block text-left text-xs text-slate-600 transition hover:text-blue-600"
-                              >
-                                {childCategory.categoryName}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <a href="#">Deals</a>
-          </nav>
-          <div className="hidden flex-1 md:block">
-            <input
-              type="text"
-              placeholder="Search products, brands..."
-              className="w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-blue-500"
-            />
-          </div>
-          <div className="ml-auto flex items-center gap-3 text-sm">
-            {session?.username ? (
-              <>
-                <span className="hidden text-slate-600 sm:inline">Hi, {session.username}</span>
-                {hasSellerAccess && (
-                  <button
-                    type="button"
-                    onClick={onGoSeller}
-                    className="rounded-full border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                  >
-                    Quan ly shop
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold"
-                >
-                  Dang xuat
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={onOpenLogin}
-                className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700"
-              >
-                Dang nhap
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={onProtectedAction}
-              className="rounded-full border border-slate-200 p-2"
-              aria-label="Open cart"
-            >
-              🛒
-            </button>
-          </div>
-        </div>
-      </header>
+      <MarketHeader
+        session={session}
+        cartCount={cartCount}
+        onGoHome={onGoHome || onBack}
+        onOpenCart={onOpenCart}
+        onOpenAuth={onOpenAuth}
+        onLogout={onLogout}
+        onOpenSeller={onOpenSeller}
+        onOpenOrders={onOpenOrders}
+      />
 
       <div className="mx-auto max-w-7xl px-4 pt-4">
         <div className="flex items-center gap-3 text-sm text-slate-600 mb-2">
@@ -438,71 +332,12 @@ export function CategoryPage({
               <>
                 <div className={`gap-4 mb-8 ${viewMode === 'grid' ? 'grid sm:grid-cols-2 lg:grid-cols-4' : 'space-y-3'}`}>
                   {products.map((item) => (
-                    <article
+                    <ProductCard
                       key={item.productId}
-                      className={`rounded-lg border border-slate-200 bg-white shadow-sm hover:shadow-lg transition cursor-pointer ${
-                        viewMode === 'list' ? 'flex gap-4 p-4' : 'overflow-hidden flex flex-col'
-                      }`}
-                    >
-                      {/* Image Container */}
-                      <div className={`overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 relative ${
-                        viewMode === 'list' ? 'w-32 h-32 flex-shrink-0 rounded-lg' : 'h-48'
-                      }`}>
-                        {item.imageUrl ? (
-                          <img
-                            src={item.imageUrl}
-                            alt={item.productName}
-                            className="h-full w-full object-cover hover:scale-105 transition"
-                          />
-                        ) : null}
-                        {/* Badge */}
-                        <span className="absolute top-2 left-2 inline-block rounded-full bg-red-500 px-2 py-1 text-[10px] font-bold text-white">
-                          Giam gia
-                        </span>
-                      </div>
-
-                      {/* Content */}
-                      <div className={`${viewMode === 'list' ? 'flex-1' : 'p-3 flex flex-col flex-1'}`}>
-                        {/* Category Badge */}
-                        <span className="inline-block rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase text-emerald-700 mb-2 w-fit">
-                          {getCategoryName(item.categoryId)}
-                        </span>
-
-                        {/* Product Name */}
-                        <h3 className={`font-semibold text-slate-900 ${viewMode === 'grid' ? 'line-clamp-2 min-h-[40px] text-sm' : 'line-clamp-2 text-sm'}`}>
-                          {item.productName}
-                        </h3>
-
-                        {/* Rating & Sales */}
-                        <div className="mt-2 flex items-center gap-2 text-xs text-slate-600">
-                          <span>⭐ {(item.averageRating || 4.5).toFixed(1)}</span>
-                          <span>({item.salesCount || 0})</span>
-                        </div>
-
-                        {/* Price */}
-                        <p className="mt-auto pt-2 text-lg font-bold text-blue-600">
-                          {formatPrice(item.price)}
-                        </p>
-
-                        {/* Original Price */}
-                        {item.originalPrice && item.originalPrice > item.price && (
-                          <p className="text-xs text-slate-500 line-through">
-                            {formatPrice(item.originalPrice)}
-                          </p>
-                        )}
-
-                        {/* Shop Info */}
-                        <p className="mt-2 text-xs text-slate-600">{item.shopName || 'Marketplace Pro'}</p>
-
-                        {/* Buy Button */}
-                        <button
-                          onClick={onProtectedAction}
-                          className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
-                        >
-                          Mua ngay
-                        </button>
-                      </div>
-                    </article>
+                      product={item}
+                      onClick={(p) => onOpenProduct?.(p.productId)}
+                      onAddToCart={onAddToCart}
+                    />
                   ))}
                 </div>
 

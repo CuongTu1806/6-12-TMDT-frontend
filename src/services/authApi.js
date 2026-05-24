@@ -8,16 +8,16 @@ async function parseJson(response) {
   }
 }
 
-function unwrapApiResponse(json, fallbackMessage) {
-  if (!json) {
-    throw new Error(fallbackMessage)
+function getErrorMessage(json, fallbackMessage) {
+  if (typeof json === 'string' && json) {
+    return json
   }
 
-  if (json.code !== 1000) {
-    throw new Error(json.message || fallbackMessage)
+  if (json && typeof json === 'object' && json.message) {
+    return json.message
   }
 
-  return json
+  return fallbackMessage
 }
 
 export async function register(payload) {
@@ -32,10 +32,10 @@ export async function register(payload) {
   const json = await parseJson(response)
 
   if (!response.ok) {
-    throw new Error(json?.message || 'Dang ky that bai')
+    throw new Error(getErrorMessage(json, 'Dang ky that bai'))
   }
 
-  return unwrapApiResponse(json, 'Dang ky that bai')
+  return json
 }
 
 export async function login(payload) {
@@ -50,10 +50,10 @@ export async function login(payload) {
   const json = await parseJson(response)
 
   if (!response.ok) {
-    throw new Error(json?.message || 'Dang nhap that bai')
+    throw new Error(getErrorMessage(json, 'Dang nhap that bai'))
   }
 
-  return unwrapApiResponse(json, 'Dang nhap that bai')
+  return json
 }
 
 export async function refreshToken(refreshTokenValue) {
@@ -68,10 +68,10 @@ export async function refreshToken(refreshTokenValue) {
   const json = await parseJson(response)
 
   if (!response.ok) {
-    throw new Error(json?.message || 'Lam moi token that bai')
+    throw new Error(getErrorMessage(json, 'Lam moi token that bai'))
   }
 
-  return unwrapApiResponse(json, 'Lam moi token that bai')
+  return json
 }
 
 export async function logout(refreshTokenValue) {
@@ -86,10 +86,10 @@ export async function logout(refreshTokenValue) {
   const json = await parseJson(response)
 
   if (!response.ok) {
-    throw new Error(json?.message || 'Dang xuat that bai')
+    throw new Error(getErrorMessage(json, 'Dang xuat that bai'))
   }
 
-  return unwrapApiResponse(json, 'Dang xuat that bai')
+  return json
 }
 
 export async function pingRole(path, token) {
@@ -103,8 +103,8 @@ export async function pingRole(path, token) {
   const json = await parseJson(response)
 
   if (!response.ok) {
-    throw new Error(json?.message || 'Kiem tra role that bai')
+    throw new Error(getErrorMessage(json, 'Kiem tra role that bai'))
   }
 
-  return unwrapApiResponse(json, 'Kiem tra role that bai')
+  return json
 }

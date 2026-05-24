@@ -20,106 +20,150 @@ const parseJson = async (response) => {
   }
 }
 
-// Get all products for current seller
+async function sellerFetch(path, options = {}) {
+  const token = getToken()
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  })
+
+  const json = await parseJson(response)
+
+  if (!response.ok) {
+    const message = json?.message || `API error: ${response.status}`
+    const err = new Error(response.status === 401 ? '401 Unauthorized' : message)
+    err.status = response.status
+    throw err
+  }
+
+  return json?.result ?? json
+}
+
+function unwrapPage(pageData) {
+  return {
+    content: pageData?.content || [],
+    totalPages: pageData?.totalPages || 0,
+    totalElements: pageData?.totalElements || 0,
+    number: pageData?.number ?? 0,
+  }
+}
+
+export async function getSellerDashboard() {
+  return sellerFetch('/dashboard')
+}
+
+export async function getSellerShop() {
+  return sellerFetch('/shop')
+}
+
+export async function updateSellerShop(data) {
+  return sellerFetch('/shop', { method: 'PUT', body: JSON.stringify(data) })
+}
+
 export async function getSellerProducts(page = 0, pageSize = 20) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/products?page=${page}&pageSize=${pageSize}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const json = await parseJson(response)
-    const pageData = json?.result || {}
-    return {
-      content: pageData.content || [],
-      totalPages: pageData.totalPages || 0,
-      totalElements: pageData.totalElements || 0,
-      number: pageData.number || 0,
-    }
-  } catch (error) {
-    console.error('Error fetching seller products:', error)
-    throw error
-  }
+  const pageData = await sellerFetch(`/products?page=${page}&pageSize=${pageSize}`)
+  return unwrapPage(pageData)
 }
 
-// Create new product
 export async function createProduct(productData) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/products`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
-      },
-      body: JSON.stringify(productData),
-    })
-
-    console.log('Create product response status:', response.status)
-    const json = await parseJson(response)
-    console.log('Create product response:', json)
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} - ${json?.message || 'Create product failed'}`)
-    }
-
-    return json?.result || json
-  } catch (error) {
-    console.error('Error creating product:', error)
-    throw error
-  }
+  return sellerFetch('/products', { method: 'POST', body: JSON.stringify(productData) })
 }
 
-// Update product
 export async function updateProduct(productId, productData) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${getToken()}`,
-      },
-      body: JSON.stringify(productData),
-    })
-
-    console.log('Update product response status:', response.status)
-    const json = await parseJson(response)
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status} - ${json?.message || 'Update product failed'}`)
-    }
-
-    return json?.result || json
-  } catch (error) {
-    console.error('Error updating product:', error)
-    throw error
-  }
+  return sellerFetch(`/products/${productId}`, { method: 'PUT', body: JSON.stringify(productData) })
 }
 
-// Delete product
+export async function updateProductVisibility(productId, status) {
+  return sellerFetch(`/products/${productId}/visibility`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
+}
+
 export async function deleteProduct(productId) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${getToken()}`,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const json = await parseJson(response)
-    return json
-  } catch (error) {
-    console.error('Error deleting product:', error)
-    throw error
-  }
+  return sellerFetch(`/products/${productId}`, { method: 'DELETE' })
 }
+
+export async function getSellerOrders(status, page = 0, pageSize = 20) {
+  const statusQuery = status !== undefined && status !== null && status !== '' ? `&status=${status}` : ''
+  const pageData = await sellerFetch(`/orders?page=${page}&pageSize=${pageSize}${statusQuery}`)
+  return unwrapPage(pageData)
+}
+
+export async function getSellerOrderDetail(orderId) {
+  return sellerFetch(`/orders/${orderId}`)
+}
+
+export async function updateOrderStatus(orderId, payload) {
+  return sellerFetch(`/orders/${orderId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function getSellerRevenue(from, to) {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return sellerFetch(`/revenue${query}`)
+}
+
+export async function getSellerReviews(page = 0, pageSize = 20) {
+  const pageData = await sellerFetch(`/reviews?page=${page}&pageSize=${pageSize}`)
+  return unwrapPage(pageData)
+}
+
+export async function replyToReview(reviewId, content) {
+  return sellerFetch(`/reviews/${reviewId}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  })
+}
+
+export async function getSellerVouchers() {
+  return sellerFetch('/vouchers')
+}
+
+export async function createVoucher(data) {
+  return sellerFetch('/vouchers', { method: 'POST', body: JSON.stringify(data) })
+}
+
+export async function updateVoucher(voucherId, data) {
+  return sellerFetch(`/vouchers/${voucherId}`, { method: 'PUT', body: JSON.stringify(data) })
+}
+
+export async function deleteVoucher(voucherId) {
+  return sellerFetch(`/vouchers/${voucherId}`, { method: 'DELETE' })
+}
+
+export const ORDER_STATUS = {
+  PENDING: 0,
+  CONFIRMED: 1,
+  SHIPPING: 2,
+  DELIVERED: 3,
+  CANCELLED: 4,
+  COMPLETED: 5,
+}
+
+export const ORDER_STATUS_LABELS = {
+  0: 'Cho xac nhan',
+  1: 'Cho lay hang',
+  2: 'Dang giao',
+  3: 'Da giao',
+  4: 'Da huy',
+  5: 'Hoan thanh',
+}
+
+export const ORDER_TABS = [
+  { key: 'all', label: 'Tat ca', status: null },
+  { key: 'pending', label: 'Cho xac nhan', status: 0 },
+  { key: 'confirmed', label: 'Cho lay hang', status: 1 },
+  { key: 'shipping', label: 'Dang giao', status: 2 },
+  { key: 'delivered', label: 'Da giao', status: 3 },
+  { key: 'cancelled', label: 'Da huy', status: 4 },
+]

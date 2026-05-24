@@ -60,6 +60,44 @@ export async function getProductsByCategory(categoryId, page = 0, pageSize = 12)
   }
 }
 
+export async function getProductDetail(productId) {
+  const response = await fetch(`${API_BASE_URL}/api/products/${productId}`)
+  const json = await parseJson(response)
+  if (!response.ok) {
+    throw new Error(json?.message || 'Khong tai duoc chi tiet san pham')
+  }
+  return json
+}
+
+export async function getProductReviews(productId) {
+  const response = await fetch(`${API_BASE_URL}/api/products/${productId}/reviews`)
+  const json = await parseJson(response)
+  if (!response.ok) {
+    return []
+  }
+  return Array.isArray(json) ? json : []
+}
+
+export async function getShopProfile(shopId) {
+  const response = await fetch(`${API_BASE_URL}/api/shops/${shopId}`)
+  const json = await parseJson(response)
+  if (!response.ok) {
+    throw new Error(json?.message || 'Khong tai duoc thong tin shop')
+  }
+  return json?.result ?? json
+}
+
+export async function getProductsByShop(shopId, page = 0, pageSize = 12) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/products/shop/${shopId}?page=${page}&pageSize=${pageSize}`,
+  )
+  const json = await parseJson(response)
+  if (!response.ok || !json?.content) {
+    throw new Error('Khong tai duoc san pham cua shop')
+  }
+  return json
+}
+
 export async function searchProducts(searchRequest) {
   const url = `${API_BASE_URL}/api/products/search`
   console.log('Search request:', searchRequest)

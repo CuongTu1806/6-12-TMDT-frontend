@@ -1,6 +1,6 @@
-import { Trash2, Edit, Eye } from 'lucide-react'
+import { Trash2, Edit, Eye, EyeOff } from 'lucide-react'
 
-export function ProductListTable({ products, onEdit, onDelete, isLoading = false }) {
+export function ProductListTable({ products, onEdit, onDelete, onToggleVisibility, isLoading = false }) {
   const formatPrice = (price) => `${Number(price || 0).toLocaleString('vi-VN')}₫`
 
   if (isLoading) {
@@ -82,18 +82,34 @@ export function ProductListTable({ products, onEdit, onDelete, isLoading = false
 
               {/* Status */}
               <td className="px-6 py-4">
-                <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                  product.isApproved
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {product.isApproved ? 'Duoc phe duyet' : 'Cho phe duyet'}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className={`inline-block w-fit px-2 py-1 rounded-full text-xs font-semibold ${
+                    product.isApproved
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {product.isApproved ? 'Duoc phe duyet' : 'Cho phe duyet'}
+                  </span>
+                  <span className={`inline-block w-fit px-2 py-1 rounded-full text-xs font-semibold ${
+                    product.status === 1 ? 'bg-slate-100 text-slate-700' : 'bg-rose-100 text-rose-700'
+                  }`}>
+                    {product.status === 1 ? 'Dang hien' : 'Da an'}
+                  </span>
+                </div>
               </td>
 
               {/* Actions */}
               <td className="px-6 py-4 text-right">
                 <div className="flex gap-2 justify-end">
+                  {onToggleVisibility && (
+                    <button
+                      onClick={() => onToggleVisibility(product)}
+                      title={product.status === 1 ? 'An san pham' : 'Hien san pham'}
+                      className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg transition"
+                    >
+                      {product.status === 1 ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  )}
                   <button
                     onClick={() => onEdit(product)}
                     title="Sua"
