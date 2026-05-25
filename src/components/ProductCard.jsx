@@ -1,5 +1,16 @@
 export function ProductCard({ product, onClick, onAddToCart }) {
   const formatPrice = (price) => `${Number(price || 0).toLocaleString('vi-VN')}₫`
+  const displayPrice = (() => {
+    try {
+      const attributes = typeof product.attributes === 'string' ? JSON.parse(product.attributes) : product.attributes
+      const prices = Array.isArray(attributes?.variants)
+        ? attributes.variants.map((variant) => Number(variant?.price || 0)).filter((price) => price > 0)
+        : []
+      return prices.length > 0 ? Math.min(...prices) : product.price
+    } catch {
+      return product.price
+    }
+  })()
 
   return (
     <article className="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -14,7 +25,7 @@ export function ProductCard({ product, onClick, onAddToCart }) {
         </span>
         <h3 className="mt-2 line-clamp-2 min-h-[40px] text-sm font-semibold text-slate-900">{product.productName}</h3>
         {product.shopName && <p className="mt-1 text-xs text-slate-500">{product.shopName}</p>}
-        <p className="mt-2 text-lg font-extrabold text-blue-600">{formatPrice(product.price)}</p>
+        <p className="mt-2 text-lg font-extrabold text-blue-600">{formatPrice(displayPrice)}</p>
         {product.averageRating > 0 && (
           <p className="mt-1 text-xs text-amber-600">★ {product.averageRating?.toFixed?.(1) || product.averageRating}</p>
         )}

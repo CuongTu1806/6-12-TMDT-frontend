@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Plus, Search } from 'lucide-react'
 import { ProductFormModal } from '../ProductFormModal'
 import { ProductListTable } from '../ProductListTable'
+import { normalizeAttributes } from '../../utils/productVariants'
 import {
   getSellerProducts,
   createProduct,
@@ -40,9 +41,14 @@ export function SellerProductsPanel() {
   }, [])
 
   const buildProductPayload = (formData) => {
-    const attributes = {
+    const normalized = normalizeAttributes({
       skuCode: formData.skuCode || '',
       variants: formData.variants || [],
+    })
+
+    const attributes = {
+      skuCode: normalized.skuCode,
+      variants: normalized.variants,
     }
     return {
       productName: formData.productName,
@@ -61,7 +67,7 @@ export function SellerProductsPanel() {
     try {
       const attrs = typeof product.attributes === 'string' ? JSON.parse(product.attributes) : product.attributes
       skuCode = attrs?.skuCode || ''
-      variants = attrs?.variants || []
+      variants = normalizeAttributes(attrs).variants
     } catch {
       /* ignore */
     }

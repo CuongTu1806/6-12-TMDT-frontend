@@ -59,10 +59,15 @@ export async function getCart() {
   return buyerFetch('/cart')
 }
 
-export async function addToCart(productId, quantity = 1) {
+export async function addToCart(productId, quantity = 1, selectedVariant = null) {
   return buyerFetch('/cart/items', {
     method: 'POST',
-    body: JSON.stringify({ productId, quantity }),
+    body: JSON.stringify({
+      productId,
+      quantity,
+      variantLabel: selectedVariant?.label || null,
+      variantPrice: selectedVariant?.price ?? null,
+    }),
   })
 }
 
@@ -81,7 +86,12 @@ export async function mergeGuestCart(items) {
   return buyerFetch('/cart/merge', {
     method: 'POST',
     body: JSON.stringify({
-      items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      items: items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        variantLabel: i.variantLabel || null,
+        variantPrice: i.variantPrice ?? null,
+      })),
     }),
   })
 }
@@ -96,6 +106,10 @@ export async function createAddress(data) {
 
 export async function checkout(payload) {
   return buyerFetch('/checkout', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export async function previewVoucher(payload) {
+  return buyerFetch('/vouchers/preview', { method: 'POST', body: JSON.stringify(payload) })
 }
 
 export async function getBuyerOrders(status, page = 0, pageSize = 20) {
@@ -122,5 +136,6 @@ export const BUYER_ORDER_TABS = [
   { key: 'confirmed', label: 'Cho lay hang', status: 1 },
   { key: 'shipping', label: 'Dang giao', status: 2 },
   { key: 'delivered', label: 'Da giao', status: 3 },
+  { key: 'completed', label: 'Hoan thanh', status: 5 },
   { key: 'cancelled', label: 'Da huy', status: 4 },
 ]

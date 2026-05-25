@@ -5,15 +5,37 @@ import { ProductCard } from '../components/ProductCard'
 
 const PRODUCT_PAGE_SIZE = 12
 
+const CATEGORY_BACKGROUND_STYLES = [
+  'from-slate-900 via-slate-700 to-slate-500',
+  'from-blue-900 via-cyan-700 to-sky-500',
+  'from-emerald-900 via-teal-700 to-cyan-500',
+  'from-amber-900 via-orange-700 to-rose-500',
+  'from-violet-900 via-fuchsia-700 to-pink-500',
+]
+
+function getCategoryBackground(categoryId, categoryName) {
+  const seed = String(categoryId ?? categoryName ?? 'category')
+  const index = Array.from(seed).reduce((sum, char) => sum + (char.codePointAt(0) || 0), 0) % CATEGORY_BACKGROUND_STYLES.length
+  return {
+    gradient: CATEGORY_BACKGROUND_STYLES[index],
+    imageUrl: `https://picsum.photos/seed/tmdt-${encodeURIComponent(seed)}/640/420`,
+  }
+}
+
 export function HomePage({
   session,
   cartCount,
+  searchKeyword,
+  searchSuggestions,
   onOpenAuth,
   onOpenCategoryPage,
   onOpenSeller,
+  onOpenAdmin,
   onLogout,
   onOpenCart,
   onOpenOrders,
+  onSearchProducts,
+  onRequestSearchSuggestions,
   onGoHome,
   onOpenProduct,
   onAddToCart,
@@ -83,12 +105,17 @@ export function HomePage({
       <MarketHeader
         session={session}
         cartCount={cartCount}
+        searchKeyword={searchKeyword}
+        searchSuggestions={searchSuggestions}
         onGoHome={onGoHome}
         onOpenCart={onOpenCart}
         onOpenAuth={onOpenAuth}
         onLogout={onLogout}
         onOpenSeller={onOpenSeller}
+        onOpenAdmin={onOpenAdmin}
         onOpenOrders={onOpenOrders}
+        onSearchProducts={onSearchProducts}
+        onRequestSearchSuggestions={onRequestSearchSuggestions}
       />
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-2">
@@ -198,12 +225,27 @@ export function HomePage({
                 key={category.categoryId}
                 type="button"
                 onClick={() => openCategoryPage(category.categoryId, category.categoryName)}
-                className="group rounded-2xl p-2 text-center"
+                className="group overflow-hidden rounded-2xl p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
               >
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl transition group-hover:bg-blue-100">
-                  •
-                </span>
-                <span className="mt-2 block text-xs font-medium text-slate-600">{category.categoryName}</span>
+                {(() => {
+                  const { gradient, imageUrl } = getCategoryBackground(category.categoryId, category.categoryName)
+
+                  return (
+                    <div className={`relative flex h-28 items-end overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-3 text-white`}>
+                      <img
+                        src={imageUrl}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-overlay"
+                      />
+                      <div className="absolute inset-0 bg-black/15" />
+                      <div className="relative z-10 max-w-full">
+                        <span className="block text-sm font-extrabold drop-shadow">{category.categoryName}</span>
+                        <span className="mt-1 block text-[11px] font-medium text-white/85">Xem ngay danh muc</span>
+                      </div>
+                    </div>
+                  )
+                })()}
               </button>
             ))}
           </div>

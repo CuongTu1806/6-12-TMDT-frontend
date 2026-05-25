@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { searchProducts, getAllCategories } from '../services/catalogApi'
 import { Grid3x3, List, ChevronDown } from 'lucide-react'
 import { MarketHeader } from '../components/MarketHeader'
@@ -6,9 +6,39 @@ import { ProductCard } from '../components/ProductCard'
 
 const PRODUCT_PAGE_SIZE = 20
 
+function FilterSection({ title, children, section, openFilter, onToggle }) {
+  return (
+    <div className="border-b pb-4">
+      <button
+        type="button"
+        onClick={() => onToggle(section)}
+        className="flex w-full items-center justify-between py-2 font-semibold text-slate-900 hover:text-blue-600"
+      >
+        <span>{title}</span>
+        <ChevronDown
+          size={18}
+          className={`transition ${openFilter === section ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {openFilter === section ? <div className="mt-3 space-y-2">{children}</div> : null}
+    </div>
+  )
+}
+
+function normalizeKeywordForSearch(value = '') {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .trim()
+}
+
 export function CategoryPage({
   categoryId,
   categoryName,
+  headerSearchKeyword,
+  searchKeyword,
+  searchSuggestions,
   onBack,
   session,
   cartCount,
@@ -20,23 +50,29 @@ export function CategoryPage({
   onOpenCart,
   onOpenOrders,
   onOpenSeller,
+  onOpenAdmin,
+  onSearchProducts,
+  onRequestSearchSuggestions,
   onOpenProduct,
   onAddToCart,
 }) {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [isLoading, setIsLoading] = useState(false)
-  const [keyword, setKeyword] = useState('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId || '')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
+  const [appliedMinPrice, setAppliedMinPrice] = useState('')
+  const [appliedMaxPrice, setAppliedMaxPrice] = useState('')
   const [currentPage, setCurrentPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
   const [sortBy, setSortBy] = useState('newest')
   const [viewMode, setViewMode] = useState('grid')
   const [selectedRatings, setSelectedRatings] = useState([])
+  const [selectedShops, setSelectedShops] = useState([])
   const [openFilter, setOpenFilter] = useState(null)
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false)
+  const latestSearchRequestRef = useRef(0)
 
   // Load categories for filter
   useEffect(() => {
@@ -51,19 +87,36 @@ export function CategoryPage({
     loadCategories()
   }, [])
 
-  // Load products with filters
   useEffect(() => {
-    loadProducts(0)
+    setSelectedCategoryId(categoryId || '')
   }, [categoryId])
 
-  const loadProducts = async (page = 0) => {
+  useEffect(() => {
+    loadProducts({ page: 0 })
+  }, [categoryId])
+
+  useEffect(() => {
+    loadProducts({ forcedKeyword: headerSearchKeyword, page: 0 })
+  }, [headerSearchKeyword])
+
+  const loadProducts = async ({ forcedKeyword, forcedMinPrice, forcedMaxPrice, page = 0 } = {}) => {
+    const requestId = latestSearchRequestRef.current + 1
+    latestSearchRequestRef.current = requestId
     setIsLoading(true)
     try {
+      const requestKeyword = normalizeKeywordForSearch(
+        typeof forcedKeyword === 'string' ? forcedKeyword : headerSearchKeyword
+      )
+
       const searchRequest = {
-        keyword: keyword || undefined,
-        minPrice: minPrice ? parseInt(minPrice) : undefined,
-        maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
-        categoryId: categoryId,
+        keyword: requestKeyword || undefined,
+        minPrice: typeof forcedMinPrice === 'string'
+          ? (forcedMinPrice ? Number.parseInt(forcedMinPrice, 10) : undefined)
+          : (appliedMinPrice ? Number.parseInt(appliedMinPrice, 10) : undefined),
+        maxPrice: typeof forcedMaxPrice === 'string'
+          ? (forcedMaxPrice ? Number.parseInt(forcedMaxPrice, 10) : undefined)
+          : (appliedMaxPrice ? Number.parseInt(appliedMaxPrice, 10) : undefined),
+        categoryId: selectedCategoryId || undefined,
         page: page,
         pageSize: PRODUCT_PAGE_SIZE,
       }
@@ -72,31 +125,45 @@ export function CategoryPage({
       const response = await searchProducts(searchRequest)
       console.log('Search response:', response)
 
+      if (latestSearchRequestRef.current !== requestId) {
+        return
+      }
+
       setProducts(response.content || [])
       setTotalPages(response.totalPages || 0)
       setTotalElements(response.totalElements || 0)
       setCurrentPage(page)
     } catch (error) {
+      if (latestSearchRequestRef.current !== requestId) {
+        return
+      }
       console.error('Error searching products:', error)
       setProducts([])
     } finally {
-      setIsLoading(false)
+      if (latestSearchRequestRef.current === requestId) {
+        setIsLoading(false)
+      }
     }
   }
 
-  const handleSearch = (e) => {
-    e.preventDefault()
+  const handleApplyPriceFilter = () => {
+    setAppliedMinPrice(minPrice)
+    setAppliedMaxPrice(maxPrice)
     setCurrentPage(0)
-    loadProducts(0)
+    loadProducts({ page: 0, forcedMinPrice: minPrice, forcedMaxPrice: maxPrice })
   }
 
   const handleReset = () => {
-    setKeyword('')
+    setSelectedCategoryId(categoryId || '')
     setMinPrice('')
     setMaxPrice('')
+    setAppliedMinPrice('')
+    setAppliedMaxPrice('')
     setSelectedRatings([])
+    setSelectedShops([])
+    setSortBy('newest')
     setCurrentPage(0)
-    loadProducts(0)
+    loadProducts({ forcedKeyword: headerSearchKeyword, page: 0 })
   }
 
   const toggleRating = (rating) => {
@@ -107,57 +174,65 @@ export function CategoryPage({
     )
   }
 
-  const formatPrice = (price) => `${Number(price || 0).toLocaleString('vi-VN')}₫`
-
-  const getCategoryName = (id) => {
-    const cat = categories.find((c) => c.categoryId === id)
-    return cat?.categoryName || 'Category'
+  const toggleShop = (shopName) => {
+    setSelectedShops((prev) => (
+      prev.includes(shopName)
+        ? prev.filter((name) => name !== shopName)
+        : [...prev, shopName]
+    ))
   }
 
-  const categoryTree = useMemo(() => {
-    const sourceCategories = headerCategories?.length ? headerCategories : categories
-    const roots = sourceCategories.filter((category) => category.parentId == null)
-    const childMap = sourceCategories.reduce((acc, category) => {
-      if (category.parentId == null) {
-        return acc
-      }
-      if (!acc[category.parentId]) {
-        acc[category.parentId] = []
-      }
-      acc[category.parentId].push(category)
-      return acc
-    }, {})
+  const sourceCategories = headerCategories?.length ? headerCategories : categories
+  const filterCategories = sourceCategories.filter((category) => category.parentId == null)
 
-    return { roots, childMap }
-  }, [headerCategories, categories])
+  const shopOptions = useMemo(() => (
+    Array.from(new Set(products.map((item) => item.shopName).filter(Boolean)))
+  ), [products])
 
-  const FilterSection = ({ title, children, section }) => (
-    <div className="border-b pb-4">
-      <button
-        onClick={() => setOpenFilter(openFilter === section ? null : section)}
-        className="flex w-full items-center justify-between py-2 font-semibold text-slate-900 hover:text-blue-600"
-      >
-        <span>{title}</span>
-        <ChevronDown
-          size={18}
-          className={`transition ${openFilter === section ? 'rotate-180' : ''}`}
-        />
-      </button>
-      {openFilter === section && <div className="mt-3 space-y-2">{children}</div>}
-    </div>
-  )
+  const displayProducts = useMemo(() => {
+    let items = [...products]
+
+    if (selectedRatings.length > 0) {
+      items = items.filter((item) => selectedRatings.some((rating) => Number(item.averageRating || 0) >= rating))
+    }
+
+    if (selectedShops.length > 0) {
+      items = items.filter((item) => selectedShops.includes(item.shopName))
+    }
+
+    if (sortBy === 'price-asc') {
+      items.sort((a, b) => Number(a.price || 0) - Number(b.price || 0))
+    } else if (sortBy === 'price-desc') {
+      items.sort((a, b) => Number(b.price || 0) - Number(a.price || 0))
+    } else if (sortBy === 'popular') {
+      items.sort((a, b) => Number(b.salesCount || 0) - Number(a.salesCount || 0))
+    } else {
+      items.sort((a, b) => Number(b.productId || 0) - Number(a.productId || 0))
+    }
+
+    return items
+  }, [products, selectedRatings, selectedShops, sortBy])
+
+  const handleToggleFilterSection = (section) => {
+    setOpenFilter((prev) => (prev === section ? null : section))
+  }
 
   return (
     <div className="min-h-screen bg-[#f2f4f8]">
       <MarketHeader
         session={session}
         cartCount={cartCount}
+        searchKeyword={searchKeyword}
+        searchSuggestions={searchSuggestions}
         onGoHome={onGoHome || onBack}
         onOpenCart={onOpenCart}
         onOpenAuth={onOpenAuth}
         onLogout={onLogout}
         onOpenSeller={onOpenSeller}
+        onOpenAdmin={onOpenAdmin}
         onOpenOrders={onOpenOrders}
+        onSearchProducts={onSearchProducts}
+        onRequestSearchSuggestions={onRequestSearchSuggestions}
       />
 
       <div className="mx-auto max-w-7xl px-4 pt-4">
@@ -169,7 +244,7 @@ export function CategoryPage({
           <span>{categoryName}</span>
         </div>
         <h1 className="text-2xl font-bold text-slate-900">Tim kiem: "{categoryName}"</h1>
-        <p className="text-sm text-slate-500 mt-1">{totalElements} san pham</p>
+        <p className="text-sm text-slate-500 mt-1">{displayProducts.length}/{totalElements} san pham</p>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
@@ -190,29 +265,43 @@ export function CategoryPage({
                 </button>
               </div>
 
-              {/* Search Input */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">
-                  Tim kiem
-                </label>
-                <input
-                  type="text"
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="Nhap ten san pham..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                />
-              </div>
-
               {/* Danh Mục Filter */}
-              <FilterSection title="Danh muc" section="category">
+              <FilterSection
+                title="Danh muc"
+                section="category"
+                openFilter={openFilter}
+                onToggle={handleToggleFilterSection}
+              >
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {categories
-                    .filter(cat => !cat.parentId)
-                    .slice(0, 10)
-                    .map(cat => (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="category"
+                      checked={!selectedCategoryId}
+                      onChange={() => {
+                        setSelectedCategoryId('')
+                        onNavigateCategory?.(null, 'Tat ca')
+                        setCurrentPage(0)
+                        loadProducts({ page: 0 })
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-slate-700">Tat ca</span>
+                  </label>
+                  {filterCategories.slice(0, 15).map((cat) => (
                       <label key={cat.categoryId} className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="category" className="rounded" />
+                        <input
+                          type="radio"
+                          name="category"
+                          checked={Number(selectedCategoryId) === Number(cat.categoryId)}
+                          onChange={() => {
+                            setSelectedCategoryId(cat.categoryId)
+                            onNavigateCategory?.(cat.categoryId, cat.categoryName)
+                            setCurrentPage(0)
+                            loadProducts({ page: 0 })
+                          }}
+                          className="rounded"
+                        />
                         <span className="text-sm text-slate-700">{cat.categoryName}</span>
                       </label>
                     ))}
@@ -220,12 +309,20 @@ export function CategoryPage({
               </FilterSection>
 
               {/* Price Range */}
-              <FilterSection title="Khoang gia" section="price">
+              <FilterSection
+                title="Khoang gia"
+                section="price"
+                openFilter={openFilter}
+                onToggle={handleToggleFilterSection}
+              >
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Tu</label>
+                    <label htmlFor="filter-min-price" className="block text-xs text-slate-600 mb-1">Tu</label>
                     <input
-                      type="number"
+                      id="filter-min-price"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={minPrice}
                       onChange={(e) => setMinPrice(e.target.value)}
                       placeholder="0"
@@ -233,20 +330,35 @@ export function CategoryPage({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Den</label>
+                    <label htmlFor="filter-max-price" className="block text-xs text-slate-600 mb-1">Den</label>
                     <input
-                      type="number"
+                      id="filter-max-price"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={maxPrice}
                       onChange={(e) => setMaxPrice(e.target.value)}
                       placeholder="999999999"
                       className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500"
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyPriceFilter}
+                    className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
+                  >
+                    Ap dung
+                  </button>
                 </div>
               </FilterSection>
 
               {/* Rating Filter */}
-              <FilterSection title="Danh gia" section="rating">
+              <FilterSection
+                title="Danh gia"
+                section="rating"
+                openFilter={openFilter}
+                onToggle={handleToggleFilterSection}
+              >
                 <div className="space-y-2">
                   {[5, 4, 3].map(rating => (
                     <label key={rating} className="flex items-center gap-2 cursor-pointer">
@@ -264,25 +376,30 @@ export function CategoryPage({
                 </div>
               </FilterSection>
 
-              {/* Store Location Filter */}
-              <FilterSection title="Vi tri cua hang" section="store">
+              {/* Shop Filter */}
+              <FilterSection
+                title="Cua hang"
+                section="store"
+                openFilter={openFilter}
+                onToggle={handleToggleFilterSection}
+              >
                 <div className="space-y-2">
-                  {['Ha Noi', 'TP. Ho Chi Minh', 'Da Nang', 'Can Tho', 'Hai Phong'].map(city => (
-                    <label key={city} className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" className="rounded" />
-                      <span className="text-sm text-slate-700">{city}</span>
+                  {shopOptions.length === 0 ? (
+                    <p className="text-xs text-slate-500">Chua co du lieu cua hang</p>
+                  ) : shopOptions.map((shop) => (
+                    <label key={shop} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedShops.includes(shop)}
+                        onChange={() => toggleShop(shop)}
+                        className="rounded"
+                      />
+                      <span className="text-sm text-slate-700">{shop}</span>
                     </label>
                   ))}
                 </div>
               </FilterSection>
 
-              {/* Search Button */}
-              <button
-                onClick={handleSearch}
-                className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition mt-4"
-              >
-                Tim kiem
-              </button>
             </div>
           </div>
 
@@ -324,14 +441,14 @@ export function CategoryPage({
               <div className="text-center py-12">
                 <p className="text-slate-600">Dang tai san pham...</p>
               </div>
-            ) : products.length === 0 ? (
+            ) : displayProducts.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
                 <p className="text-slate-600 text-lg">Khong co san pham phu hop voi dieu kien tim kiem.</p>
               </div>
             ) : (
               <>
                 <div className={`gap-4 mb-8 ${viewMode === 'grid' ? 'grid sm:grid-cols-2 lg:grid-cols-4' : 'space-y-3'}`}>
-                  {products.map((item) => (
+                  {displayProducts.map((item) => (
                     <ProductCard
                       key={item.productId}
                       product={item}
@@ -345,7 +462,7 @@ export function CategoryPage({
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-8 bg-white rounded-lg p-4 border border-slate-200">
                     <button
-                      onClick={() => loadProducts(Math.max(0, currentPage - 1))}
+                      onClick={() => loadProducts({ page: Math.max(0, currentPage - 1) })}
                       disabled={currentPage === 0}
                       className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
                     >
@@ -356,7 +473,7 @@ export function CategoryPage({
                       {currentPage > 2 && (
                         <>
                           <button
-                            onClick={() => loadProducts(0)}
+                            onClick={() => loadProducts({ page: 0 })}
                             className="rounded-lg px-3 py-2 text-sm font-semibold border border-slate-300 hover:bg-slate-100"
                           >
                             1
@@ -370,7 +487,7 @@ export function CategoryPage({
                         return (
                           <button
                             key={pageNum}
-                            onClick={() => loadProducts(pageNum)}
+                            onClick={() => loadProducts({ page: pageNum })}
                             className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                               pageNum === currentPage
                                 ? 'bg-blue-600 text-white'
@@ -385,7 +502,7 @@ export function CategoryPage({
                         <>
                           <span className="text-slate-500">...</span>
                           <button
-                            onClick={() => loadProducts(totalPages - 1)}
+                            onClick={() => loadProducts({ page: totalPages - 1 })}
                             className="rounded-lg px-3 py-2 text-sm font-semibold border border-slate-300 hover:bg-slate-100"
                           >
                             {totalPages}
@@ -395,7 +512,7 @@ export function CategoryPage({
                     </div>
 
                     <button
-                      onClick={() => loadProducts(Math.min(totalPages - 1, currentPage + 1))}
+                      onClick={() => loadProducts({ page: Math.min(totalPages - 1, currentPage + 1) })}
                       disabled={currentPage === totalPages - 1}
                       className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 hover:bg-slate-100 transition"
                     >

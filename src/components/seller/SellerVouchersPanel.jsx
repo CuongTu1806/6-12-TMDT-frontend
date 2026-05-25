@@ -83,47 +83,75 @@ export function SellerVouchersPanel() {
 
       {showForm && (
         <form onSubmit={handleCreate} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
-          <input
-            placeholder="Ma voucher"
-            value={form.code}
-            onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
-            className="rounded-lg border px-3 py-2 text-sm"
-            required
-          />
-          <select
-            value={form.discountType}
-            onChange={(e) => setForm((f) => ({ ...f, discountType: e.target.value }))}
-            className="rounded-lg border px-3 py-2 text-sm"
-          >
-            <option value="PERCENT">Phan tram</option>
-            <option value="FIXED">So tien co dinh</option>
-          </select>
-          <input
-            type="number"
-            placeholder="Gia tri giam"
-            value={form.discountValue}
-            onChange={(e) => setForm((f) => ({ ...f, discountValue: e.target.value }))}
-            className="rounded-lg border px-3 py-2 text-sm"
-          />
-          <input
-            type="number"
-            placeholder="Don toi thieu"
-            value={form.minOrderValue}
-            onChange={(e) => setForm((f) => ({ ...f, minOrderValue: e.target.value }))}
-            className="rounded-lg border px-3 py-2 text-sm"
-          />
-          <input
-            type="date"
-            value={form.startDate}
-            onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
-            className="rounded-lg border px-3 py-2 text-sm"
-          />
-          <input
-            type="date"
-            value={form.endDate}
-            onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
-            className="rounded-lg border px-3 py-2 text-sm"
-          />
+          <label className="space-y-1 text-sm sm:col-span-1">
+            <span className="block font-medium text-slate-700">Mã voucher</span>
+            <input
+              placeholder="VD: SALE2026"
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+              required
+            />
+          </label>
+          <label className="space-y-1 text-sm sm:col-span-1">
+            <span className="block font-medium text-slate-700">Loại giảm giá</span>
+            <select
+              value={form.discountType}
+              onChange={(e) => setForm((f) => ({ ...f, discountType: e.target.value }))}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            >
+              <option value="PERCENT">Phần trăm</option>
+              <option value="FIXED">Số tiền cố định</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-sm sm:col-span-1">
+            <span className="block font-medium text-slate-700">Giá trị giảm</span>
+            <input
+              type="number"
+              placeholder="Ví dụ: 10"
+              value={form.discountValue}
+              onChange={(e) => setForm((f) => ({ ...f, discountValue: e.target.value }))}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm sm:col-span-1">
+            <span className="block font-medium text-slate-700">Giá trị đơn hàng tối thiểu</span>
+            <input
+              type="number"
+              placeholder="Ví dụ: 200000"
+              value={form.minOrderValue}
+              onChange={(e) => setForm((f) => ({ ...f, minOrderValue: e.target.value }))}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm sm:col-span-1">
+            <span className="block font-medium text-slate-700">Giảm tối đa</span>
+            <input
+              type="number"
+              placeholder="Ví dụ: 50000"
+              value={form.maxDiscount}
+              onChange={(e) => setForm((f) => ({ ...f, maxDiscount: e.target.value }))}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm sm:col-span-1">
+            <span className="block font-medium text-slate-700">Ngày bắt đầu</span>
+            <input
+              type="date"
+              value={form.startDate}
+              onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="space-y-1 text-sm sm:col-span-1">
+            <span className="block font-medium text-slate-700">Ngày kết thúc</span>
+            <input
+              type="date"
+              value={form.endDate}
+              onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+              className="w-full rounded-lg border px-3 py-2 text-sm"
+            />
+          </label>
           <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white sm:col-span-2">
             Luu voucher
           </button>

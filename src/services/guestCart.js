@@ -21,24 +21,34 @@ export function getGuestCartCount() {
   return getGuestCart().reduce((sum, item) => sum + (item.quantity || 0), 0)
 }
 
-export function addToGuestCart(product, quantity = 1) {
+function getGuestCartItemKey(productId, variantLabel) {
+  return `${productId}::${variantLabel || 'default'}`
+}
+
+export function addToGuestCart(product, quantity = 1, selectedVariant = null) {
   const items = getGuestCart()
-  const existing = items.find((i) => i.productId === product.productId)
+  const variantLabel = selectedVariant?.label || ''
+  const variantPrice = selectedVariant?.price ?? product.price
+  const cartItemKey = getGuestCartItemKey(product.productId, variantLabel)
+  const existing = items.find((i) => i.cartItemKey === cartItemKey)
 
   if (existing) {
     existing.quantity = Math.min(
       (existing.quantity || 0) + quantity,
-      product.stockQuantity ?? 999,
+      selectedVariant?.stockQuantity ?? product.stockQuantity ?? 999,
     )
   } else {
     items.push({
+      cartItemKey,
       productId: product.productId,
       productName: product.productName,
-      price: product.price,
+      variantLabel,
+      variantPrice,
+      price: variantPrice,
       imageUrl: product.imageUrl,
       shopId: product.shopId,
       shopName: product.shopName,
-      stockQuantity: product.stockQuantity,
+      stockQuantity: selectedVariant?.stockQuantity ?? product.stockQuantity,
       quantity,
     })
   }
@@ -47,21 +57,21 @@ export function addToGuestCart(product, quantity = 1) {
   return items
 }
 
-export function updateGuestCartItem(productId, quantity) {
+export function updateGuestCartItem(cartItemKey, quantity) {
   let items = getGuestCart()
   if (quantity <= 0) {
-    items = items.filter((i) => i.productId !== productId)
+    items = items.filter((i) => i.cartItemKey !== cartItemKey)
   } else {
     items = items.map((i) =>
-      i.productId === productId ? { ...i, quantity: Math.min(quantity, i.stockQuantity ?? 999) } : i,
+      i.cartItemKey === cartItemKey ? { ...i, quantity: Math.min(quantity, i.stockQuantity ?? 999) } : i,
     )
   }
   saveGuestCart(items)
   return items
 }
 
-export function removeFromGuestCart(productId) {
-  const items = getGuestCart().filter((i) => i.productId !== productId)
+export function removeFromGuestCart(cartItemKey) {
+  const items = getGuestCart().filter((i) => i.cartItemKey !== cartItemKey)
   saveGuestCart(items)
   return items
 }

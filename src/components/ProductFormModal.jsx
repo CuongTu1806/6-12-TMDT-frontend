@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Upload } from 'lucide-react'
+import { X } from 'lucide-react'
 import { getAllCategories } from '../services/catalogApi'
 
 export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading = false }) {
@@ -15,7 +15,7 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
   })
   const [categories, setCategories] = useState([])
   const [variants, setVariants] = useState([])
-  const [newVariant, setNewVariant] = useState('')
+  const [variantDraft, setVariantDraft] = useState({ label: '', price: 0, stockQuantity: 0 })
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -53,6 +53,7 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
         originalPrice: product.originalPrice || 0,
       })
       setVariants(variants)
+      setVariantDraft({ label: '', price: 0, stockQuantity: 0 })
     } else {
       setFormData({
         productName: '',
@@ -65,6 +66,7 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
         originalPrice: 0,
       })
       setVariants([])
+      setVariantDraft({ label: '', price: 0, stockQuantity: 0 })
     }
   }, [product])
 
@@ -73,16 +75,26 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
     setFormData(prev => ({
       ...prev,
       [name]: name === 'price' || name === 'stockQuantity' || name === 'originalPrice' 
-        ? parseFloat(value) || 0 
+        ? Number.parseFloat(value) || 0 
         : value
     }))
   }
 
   const handleAddVariant = () => {
-    if (newVariant.trim()) {
-      setVariants([...variants, newVariant])
-      setNewVariant('')
+    const label = variantDraft.label.trim()
+    if (!label) {
+      return
     }
+
+    setVariants([
+      ...variants,
+      {
+        label,
+        price: Number(variantDraft.price) || 0,
+        stockQuantity: Number(variantDraft.stockQuantity) || 0,
+      },
+    ])
+    setVariantDraft({ label: '', price: 0, stockQuantity: 0 })
   }
 
   const handleRemoveVariant = (index) => {
@@ -97,19 +109,22 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
     })
   }
 
+  const submitLabel = isLoading ? 'Dang luu...' : product ? 'Cap nhat san pham' : 'Luu san pham'
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/25 p-4 backdrop-blur-[3px]">
+      <div className="w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.2)]">
         {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between bg-white border-b p-6">
+        <div className="sticky top-0 flex items-center justify-between border-b border-slate-200 bg-white/95 px-6 py-5 backdrop-blur">
           <h2 className="text-2xl font-bold text-slate-900">
             {product ? 'Sua san pham' : 'Them san pham moi'}
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-700"
+            className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Dong form"
           >
             <X size={24} />
           </button>
@@ -258,33 +273,54 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
             <label className="block text-sm font-semibold text-slate-700 mb-2">
               Bien the (kich thuoc, mau sac)
             </label>
-            <div className="flex gap-2 mb-3">
+            <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-[1.4fr_0.8fr_0.8fr_auto]">
               <input
                 type="text"
-                value={newVariant}
-                onChange={(e) => setNewVariant(e.target.value)}
-                placeholder="VD: Size M, Mau Den"
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+                value={variantDraft.label}
+                onChange={(e) => setVariantDraft((prev) => ({ ...prev, label: e.target.value }))}
+                placeholder="VD: Size M / Mau Den / 8GB RAM"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+              />
+              <input
+                type="number"
+                min="0"
+                value={variantDraft.price}
+                onChange={(e) => setVariantDraft((prev) => ({ ...prev, price: e.target.value }))}
+                placeholder="Gia"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+              />
+              <input
+                type="number"
+                min="0"
+                value={variantDraft.stockQuantity}
+                onChange={(e) => setVariantDraft((prev) => ({ ...prev, stockQuantity: e.target.value }))}
+                placeholder="Ton kho"
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
               />
               <button
                 type="button"
                 onClick={handleAddVariant}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 + Them
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="mt-3 space-y-2">
               {variants.map((variant, index) => (
                 <div
                   key={index}
-                  className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-2"
+                  className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-700"
                 >
-                  {variant}
+                  <div>
+                    <p className="font-semibold">{variant.label}</p>
+                    <p className="text-xs text-blue-600">
+                      {Number(variant.price || 0).toLocaleString('vi-VN')}₫ · Ton kho: {variant.stockQuantity ?? 0}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveVariant(index)}
-                    className="text-blue-600 hover:text-blue-800"
+                    className="rounded-full px-2 py-1 text-blue-600 hover:bg-blue-100 hover:text-blue-800"
                   >
                     ×
                   </button>
@@ -307,7 +343,7 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
               disabled={isLoading}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50"
             >
-              {isLoading ? 'Dang luu...' : product ? 'Cap nhat san pham' : 'Luu san pham'}
+              {submitLabel}
             </button>
           </div>
         </form>
