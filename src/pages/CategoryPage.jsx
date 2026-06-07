@@ -37,6 +37,7 @@ export function CategoryPage({
   categoryId,
   categoryName,
   headerSearchKeyword,
+  imageSearchResult,
   searchKeyword,
   searchSuggestions,
   onBack,
@@ -73,6 +74,7 @@ export function CategoryPage({
   const [selectedShops, setSelectedShops] = useState([])
   const [openFilter, setOpenFilter] = useState(null)
   const latestSearchRequestRef = useRef(0)
+  const isImageSearchMode = Boolean(imageSearchResult)
 
   // Load categories for filter
   useEffect(() => {
@@ -92,14 +94,36 @@ export function CategoryPage({
   }, [categoryId])
 
   useEffect(() => {
+    if (isImageSearchMode) {
+      return
+    }
     loadProducts({ page: 0 })
-  }, [categoryId])
+  }, [categoryId, isImageSearchMode])
 
   useEffect(() => {
+    if (isImageSearchMode) {
+      return
+    }
     loadProducts({ forcedKeyword: headerSearchKeyword, page: 0 })
-  }, [headerSearchKeyword])
+  }, [headerSearchKeyword, isImageSearchMode])
+
+  useEffect(() => {
+    if (!isImageSearchMode) {
+      return
+    }
+
+    setProducts(imageSearchResult.products || [])
+    setTotalPages(imageSearchResult.totalPages || 0)
+    setTotalElements(imageSearchResult.totalElements || 0)
+    setCurrentPage(0)
+    setIsLoading(false)
+  }, [imageSearchResult, isImageSearchMode])
 
   const loadProducts = async ({ forcedKeyword, forcedMinPrice, forcedMaxPrice, page = 0 } = {}) => {
+    if (isImageSearchMode) {
+      return
+    }
+
     const requestId = latestSearchRequestRef.current + 1
     latestSearchRequestRef.current = requestId
     setIsLoading(true)
@@ -206,12 +230,14 @@ export function CategoryPage({
       items.sort((a, b) => Number(b.price || 0) - Number(a.price || 0))
     } else if (sortBy === 'popular') {
       items.sort((a, b) => Number(b.salesCount || 0) - Number(a.salesCount || 0))
+    } else if (isImageSearchMode) {
+      items.sort((a, b) => Number(b.imageSimilarity || 0) - Number(a.imageSimilarity || 0))
     } else {
       items.sort((a, b) => Number(b.productId || 0) - Number(a.productId || 0))
     }
 
     return items
-  }, [products, selectedRatings, selectedShops, sortBy])
+  }, [products, selectedRatings, selectedShops, sortBy, isImageSearchMode])
 
   const handleToggleFilterSection = (section) => {
     setOpenFilter((prev) => (prev === section ? null : section))
@@ -243,14 +269,18 @@ export function CategoryPage({
           <span>›</span>
           <span>{categoryName}</span>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">Tim kiem: "{categoryName}"</h1>
-        <p className="text-sm text-slate-500 mt-1">{displayProducts.length}/{totalElements} san pham</p>
+        <h1 className="text-2xl font-bold text-slate-900">{isImageSearchMode ? 'Ket qua tim bang hinh anh' : `Tim kiem: "${categoryName}"`}</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          {isImageSearchMode
+            ? `${displayProducts.length} san pham co do trung lap tu 80% tro len`
+            : `${displayProducts.length}/${totalElements} san pham`}
+        </p>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-5">
+        <div className={`grid gap-6 ${isImageSearchMode ? '' : 'lg:grid-cols-5'}`}>
           {/* Sidebar - Filters */}
-          <div className="lg:col-span-1">
+          {!isImageSearchMode && <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-4 bg-white rounded-lg p-4 border border-slate-200">
               {/* Filter Header */}
               <div className="flex items-center justify-between pb-4 border-b">
@@ -401,10 +431,10 @@ export function CategoryPage({
               </FilterSection>
 
             </div>
-          </div>
+          </div>}
 
           {/* Main Content - Products */}
-          <div className="lg:col-span-4">
+          <div className={isImageSearchMode ? '' : 'lg:col-span-4'}>
             {/* View Controls */}
             <div className="mb-6 flex items-center justify-between bg-white rounded-lg p-4 border border-slate-200">
               <div className="flex items-center gap-4">
@@ -429,7 +459,7 @@ export function CategoryPage({
                 onChange={(e) => setSortBy(e.target.value)}
                 className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold outline-none focus:border-blue-500 cursor-pointer"
               >
-                <option value="newest">San pham moi</option>
+                <option value="newest">{isImageSearchMode ? 'Trung anh cao nhat' : 'San pham moi'}</option>
                 <option value="price-asc">Gia: Thap den cao</option>
                 <option value="price-desc">Gia: Cao den thap</option>
                 <option value="popular">Pho bien nhat</option>

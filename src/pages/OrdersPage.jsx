@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MarketHeader } from '../components/MarketHeader'
+import { getProductImageUrl } from '../utils/image'
 import { getBuyerOrders, cancelBuyerOrder, createReview, BUYER_ORDER_TABS } from '../services/buyerApi'
 
 const formatPrice = (p) => `${Number(p || 0).toLocaleString('vi-VN')}₫`
@@ -156,7 +157,7 @@ export function OrdersPage({
                     <div className="mt-3 space-y-3">
                       {(order.items || []).map((item) => (
                         <div key={item.productId} className="flex items-center gap-3">
-                          {item.imageUrl ? <img src={item.imageUrl} alt="" className="h-16 w-16 rounded object-cover" /> : <div className="h-16 w-16 rounded bg-slate-100" />}
+                          {item.imageUrl ? <img src={getProductImageUrl(item.imageUrl)} alt="" className="h-16 w-16 rounded object-cover" /> : <div className="h-16 w-16 rounded bg-slate-100" />}
                           <div className="flex-1">
                             <p className="font-semibold">{item.productName}</p>
                             {item.variantLabel ? <p className="text-xs text-slate-500">Phien ban: {item.variantLabel}</p> : null}

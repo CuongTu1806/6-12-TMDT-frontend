@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
-import { getAllCategories, getVisibleProducts } from '../services/catalogApi'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { getAllCategories, getVisibleProducts, imageSearchProducts } from '../services/catalogApi'
 import { MarketHeader } from '../components/MarketHeader'
 import { ProductCard } from '../components/ProductCard'
+import { ImageUp, Search } from 'lucide-react'
 
 const PRODUCT_PAGE_SIZE = 12
 
@@ -36,6 +37,7 @@ export function HomePage({
   onOpenOrders,
   onSearchProducts,
   onRequestSearchSuggestions,
+  onImageSearchComplete,
   onGoHome,
   onOpenProduct,
   onAddToCart,
@@ -47,6 +49,8 @@ export function HomePage({
   const [isProductsLoading, setIsProductsLoading] = useState(false)
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(false)
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false)
+  const [isImageSearching, setIsImageSearching] = useState(false)
+  const imageInputRef = useRef(null)
 
   useEffect(() => {
     const initCatalog = async () => {
@@ -98,6 +102,41 @@ export function HomePage({
   const openCategoryPage = (categoryId, categoryName) => {
     onOpenCategoryPage?.(categoryId, categoryName)
     setIsCategoryMenuOpen(false)
+  }
+
+  const handleImageSearchUpload = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) {
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      onNotify?.('error', 'Vui long chon file anh')
+      return
+    }
+
+    setIsImageSearching(true)
+    try {
+      const response = await imageSearchProducts(file, 0, 200)
+      onImageSearchComplete?.({
+        fileName: file.name,
+        products: response.content || [],
+        totalElements: response.totalElements || 0,
+        totalPages: response.totalPages || 0,
+      })
+      onNotify?.(
+        response.totalElements > 0 ? 'success' : 'error',
+        response.totalElements > 0
+          ? `Tim thay ${response.totalElements} san pham co do trung lap tu 80%`
+          : 'Khong co san pham nao trung lap tu 80%'
+      )
+    } catch (error) {
+      onNotify?.('error', error.message || 'Khong tim kiem duoc bang hinh anh')
+    } finally {
+      setIsImageSearching(false)
+    }
   }
 
   return (
@@ -180,6 +219,22 @@ export function HomePage({
               className="rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-300/70 transition hover:-translate-y-0.5"
             >
               Mua sam ngay
+            </button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSearchUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isImageSearching}
+              className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white px-5 py-3 text-sm font-bold text-blue-700 shadow-sm transition hover:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isImageSearching ? <Search size={17} className="animate-pulse" /> : <ImageUp size={17} />}
+              {isImageSearching ? 'Dang tim anh...' : 'Tim bang hinh anh'}
             </button>
             <button
               type="button"

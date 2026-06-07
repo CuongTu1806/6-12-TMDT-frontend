@@ -3,6 +3,7 @@ import { ArrowLeft, ShoppingCart } from 'lucide-react'
 import { ProductCard } from '../components/ProductCard'
 import { MarketHeader } from '../components/MarketHeader'
 import { getProductDetail, getProductReviews, getProductsByShop } from '../services/catalogApi'
+import { getProductImageUrl } from '../utils/image'
 import { previewVoucher } from '../services/buyerApi'
 import { parseProductAttributes } from '../utils/productVariants'
 
@@ -163,7 +164,7 @@ export function ProductDetailPage({
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             {product.imageUrl ? (
-              <img src={product.imageUrl} alt={product.productName} className="aspect-square w-full object-cover" />
+              <img src={getProductImageUrl(product.imageUrl)} alt={product.productName} className="aspect-square w-full object-cover" />
             ) : (
               <div className="flex aspect-square items-center justify-center bg-slate-100 text-slate-400">Chua co hinh anh</div>
             )}

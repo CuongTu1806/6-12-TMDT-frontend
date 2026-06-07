@@ -171,6 +171,7 @@ function App() {
   const [checkoutVoucherCode, setCheckoutVoucherCode] = useState('')
   const [headerSearchKeyword, setHeaderSearchKeyword] = useState(initialNavigationState?.headerSearchKeyword || '')
   const [searchSuggestions, setSearchSuggestions] = useState([])
+  const [imageSearchResult, setImageSearchResult] = useState(null)
   const [cartCount, setCartCount] = useState(0)
   const suggestionRequestRef = useRef(0)
 
@@ -305,6 +306,7 @@ function App() {
 
   const handleSearchProducts = (keyword = '') => {
     const normalizedKeyword = keyword.trim()
+    setImageSearchResult(null)
     setSearchSuggestions([])
     setHeaderSearchKeyword(normalizedKeyword)
     setSelectedCategoryForPage({ id: null, name: normalizedKeyword ? `Tim: ${normalizedKeyword}` : 'Tat ca' })
@@ -406,6 +408,7 @@ function App() {
     searchKeyword: headerSearchKeyword,
     searchSuggestions,
     onGoHome: () => {
+      setImageSearchResult(null)
       setCurrentPage('home')
       navigate('/')
     },
@@ -446,6 +449,7 @@ function App() {
       navigate('/orders')
     },
     onSearchProducts: (keyword) => {
+      setImageSearchResult(null)
       handleSearchProducts(keyword)
       navigate(buildCategoryPath(null, keyword ? `Tim: ${keyword.trim()}` : 'Tat ca', keyword.trim()))
     },
@@ -567,7 +571,9 @@ function App() {
         categoryId={selectedCategoryForPage.id}
         categoryName={selectedCategoryForPage.name}
         headerSearchKeyword={headerSearchKeyword}
+        imageSearchResult={imageSearchResult}
         onBack={() => {
+          setImageSearchResult(null)
           setCurrentPage('home')
           navigate('/')
         }}
@@ -579,6 +585,7 @@ function App() {
         onAddToCart={handleAddToCart}
         {...commonNav}
         onNavigateCategory={(id, name) => {
+          setImageSearchResult(null)
           setSelectedCategoryForPage({ id, name })
           setCurrentPage('category')
           navigate(buildCategoryPath(id, name, headerSearchKeyword))
@@ -592,6 +599,7 @@ function App() {
       <HomePage
         {...commonNav}
         onOpenCategoryPage={(id, name) => {
+          setImageSearchResult(null)
           setSelectedCategoryForPage({ id, name })
           setCurrentPage('category')
           navigate(buildCategoryPath(id, name, headerSearchKeyword))
@@ -600,6 +608,13 @@ function App() {
           setSelectedProductId(id)
           setCurrentPage('product')
           navigate(`/product/${id}`)
+        }}
+        onImageSearchComplete={(result) => {
+          setImageSearchResult(result)
+          setHeaderSearchKeyword('')
+          setSelectedCategoryForPage({ id: null, name: `Tim bang hinh anh: ${result.fileName}` })
+          setCurrentPage('category')
+          navigate(buildCategoryPath(null, `Tim bang hinh anh: ${result.fileName}`))
         }}
         onAddToCart={handleAddToCart}
       />

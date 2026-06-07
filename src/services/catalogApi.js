@@ -130,3 +130,22 @@ export async function searchProducts(searchRequest) {
     throw error
   }
 }
+
+export async function imageSearchProducts(imageFile, page = 0, pageSize = 200) {
+  const formData = new FormData()
+  formData.append('image', imageFile)
+  formData.append('page', String(page))
+  formData.append('pageSize', String(pageSize))
+
+  const response = await fetch(`${API_BASE_URL}/api/products/image-search`, {
+    method: 'POST',
+    body: formData,
+  })
+  const json = await parseJson(response)
+
+  if (!response.ok || !json?.content) {
+    throw new Error(json?.message || 'Khong tim duoc san pham bang hinh anh')
+  }
+
+  return json
+}

@@ -1,4 +1,5 @@
 import { Trash2, Edit, Eye, EyeOff } from 'lucide-react'
+import { getProductImageUrl } from '../utils/image'
 
 export function ProductListTable({ products, onEdit, onDelete, onToggleVisibility, isLoading = false }) {
   const formatPrice = (price) => `${Number(price || 0).toLocaleString('vi-VN')}₫`
@@ -42,7 +43,7 @@ export function ProductListTable({ products, onEdit, onDelete, onToggleVisibilit
                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100">
                   {product.imageUrl ? (
                     <img
-                      src={product.imageUrl}
+                      src={getProductImageUrl(product.imageUrl)}
                       alt={product.productName}
                       className="w-full h-full object-cover"
                     />

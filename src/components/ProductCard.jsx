@@ -1,3 +1,5 @@
+import { getProductImageUrl } from '../utils/image'
+
 export function ProductCard({ product, onClick, onAddToCart }) {
   const formatPrice = (price) => `${Number(price || 0).toLocaleString('vi-VN')}₫`
   const displayPrice = (() => {
@@ -17,7 +19,7 @@ export function ProductCard({ product, onClick, onAddToCart }) {
       <button type="button" onClick={() => onClick?.(product)} className="block w-full text-left">
         <div className="h-44 overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200">
           {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.productName} className="h-full w-full object-cover transition group-hover:scale-105" />
+            <img src={getProductImageUrl(product.imageUrl)} alt={product.productName} className="h-full w-full object-cover transition group-hover:scale-105" />
           ) : null}
         </div>
         <span className="mt-3 inline-block rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">
@@ -28,6 +30,11 @@ export function ProductCard({ product, onClick, onAddToCart }) {
         <p className="mt-2 text-lg font-extrabold text-blue-600">{formatPrice(displayPrice)}</p>
         {product.averageRating > 0 && (
           <p className="mt-1 text-xs text-amber-600">★ {product.averageRating?.toFixed?.(1) || product.averageRating}</p>
+        )}
+        {typeof product.imageSimilarity === 'number' && (
+          <p className="mt-2 inline-flex rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-700">
+            Trung anh {(product.imageSimilarity * 100).toFixed(1)}%
+          </p>
         )}
       </button>
       <button

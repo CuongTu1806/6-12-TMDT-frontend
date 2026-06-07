@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CreditCard, MapPin, Ticket, Truck } from 'lucide-react'
 import { MarketHeader } from '../components/MarketHeader'
+import { getProductImageUrl } from '../utils/image'
 import { checkout, getAddresses, createAddress, getCart, previewVoucher } from '../services/buyerApi'
 
 const formatPrice = (p) => `${Number(p || 0).toLocaleString('vi-VN')}₫`
@@ -456,7 +457,7 @@ export function CheckoutPage({
                       {group.items.map((item) => (
                         <div key={item.cartItemId} className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
                           {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.productName} className="h-14 w-14 rounded-lg object-cover" />
+                            <img src={getProductImageUrl(item.imageUrl)} alt={item.productName} className="h-14 w-14 rounded-lg object-cover" />
                           ) : (
                             <div className="h-14 w-14 rounded-lg bg-slate-100" />
                           )}

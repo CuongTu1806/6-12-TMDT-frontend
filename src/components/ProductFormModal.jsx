@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { getAllCategories } from '../services/catalogApi'
+import { getProductImageUrl } from '../utils/image'
 
 export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading = false }) {
   const [formData, setFormData] = useState({
@@ -263,7 +264,7 @@ export function ProductFormModal({ isOpen, product, onClose, onSubmit, isLoading
             />
             {formData.imageUrl && (
               <div className="mt-2 w-32 h-32 rounded-lg overflow-hidden bg-slate-100">
-                <img src={formData.imageUrl} alt="preview" className="w-full h-full object-cover" />
+                <img src={getProductImageUrl(formData.imageUrl)} alt="preview" className="w-full h-full object-cover" />
               </div>
             )}
           </div>

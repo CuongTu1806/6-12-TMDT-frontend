@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { MarketHeader } from '../components/MarketHeader'
+import { getProductImageUrl } from '../utils/image'
 import { getCart, updateCartItem, removeCartItem } from '../services/buyerApi'
 import { getGuestCart, updateGuestCartItem, removeFromGuestCart, groupGuestCartByShop } from '../services/guestCart'
 
@@ -143,7 +144,7 @@ export function CartPage({
         ) : null}
 
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-          {item.imageUrl && <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />}
+          {item.imageUrl && <img src={getProductImageUrl(item.imageUrl)} alt="" className="h-full w-full object-cover" />}
         </div>
 
         <div className="flex-1">
