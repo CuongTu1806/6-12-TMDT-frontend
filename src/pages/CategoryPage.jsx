@@ -489,7 +489,7 @@ export function CategoryPage({
               </div>
             ) : (
               <>
-                <div className={`gap-3 sm:gap-4 mb-8 ${viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-3'}`}>
+                <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 mb-8' : 'space-y-3 mb-8'}>
                   {displayProducts.map((item) => (
                     <ProductCard
                       key={item.productId}

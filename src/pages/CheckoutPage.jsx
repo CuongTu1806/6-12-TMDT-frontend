@@ -327,7 +327,7 @@ export function CheckoutPage({
             Khong co san pham nao duoc chon de thanh toan.
           </div>
         ) : (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-4">
               <section className="rounded-2xl border border-slate-200 bg-white p-5">
                 <div className="flex items-center justify-between">
