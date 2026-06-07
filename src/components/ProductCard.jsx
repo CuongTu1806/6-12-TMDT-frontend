@@ -17,9 +17,9 @@ export function ProductCard({ product, onClick, onAddToCart }) {
   return (
     <article className="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <button type="button" onClick={() => onClick?.(product)} className="block w-full text-left">
-        <div className="h-44 overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200">
+        <div className="h-44 overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
           {product.imageUrl ? (
-            <img src={getProductImageUrl(product.imageUrl)} alt={product.productName} className="h-full w-full object-cover transition group-hover:scale-105" />
+            <img src={getProductImageUrl(product.imageUrl)} alt={product.productName} className="h-full w-full object-contain transition group-hover:scale-105" />
           ) : null}
         </div>
         <span className="mt-3 inline-block rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">

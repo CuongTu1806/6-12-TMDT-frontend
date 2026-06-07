@@ -311,13 +311,13 @@ export function HomePage({
         <div className="relative overflow-hidden rounded-2xl bg-blue-600 px-8 py-8 text-white">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-100">Flash sale cuoi tuan</p>
           <h3 className="mt-3 text-3xl font-black">Giam den 50% cho phu kien cong nghe chinh hang</h3>
-            <button
-              type="button"
-              onClick={onOpenCart}
-              className="mt-5 rounded-full bg-white px-5 py-2 text-sm font-bold text-blue-700"
-            >
-              Nhan uu dai ngay
-            </button>
+          <button
+            type="button"
+            onClick={onOpenCart}
+            className="mt-5 rounded-full bg-white px-5 py-2 text-sm font-bold text-blue-700"
+          >
+            Nhan uu dai ngay
+          </button>
           <div className="pointer-events-none absolute -right-7 -top-7 h-44 w-44 rounded-full border-8 border-white/20" />
         </div>
       </section>
