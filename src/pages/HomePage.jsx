@@ -273,7 +273,7 @@ export function HomePage({
               Xem tat ca
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-3 md:grid-cols-8">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
             {isCategoriesLoading ? <p className="col-span-full text-sm text-slate-500">Dang tai danh muc...</p> : null}
             {categories.map((category) => (
               <button
@@ -329,7 +329,7 @@ export function HomePage({
             Tai lai
           </button>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
           {featuredProducts.slice(0, 8).map((item) => (
             <ProductCard
               key={item.productId}

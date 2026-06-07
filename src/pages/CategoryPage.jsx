@@ -73,6 +73,7 @@ export function CategoryPage({
   const [selectedRatings, setSelectedRatings] = useState([])
   const [selectedShops, setSelectedShops] = useState([])
   const [openFilter, setOpenFilter] = useState(null)
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
   const latestSearchRequestRef = useRef(0)
   const isImageSearchMode = Boolean(imageSearchResult)
 
@@ -278,9 +279,20 @@ export function CategoryPage({
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-6">
+        {/* Mobile filter toggle button */}
+        {!isImageSearchMode && (
+          <button
+            type="button"
+            onClick={() => setIsMobileFilterOpen((prev) => !prev)}
+            className="mb-4 flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-400 hover:text-blue-600 lg:hidden"
+          >
+            <span>🔍</span>
+            {isMobileFilterOpen ? 'Ẩn bộ lọc' : 'Bộ lọc'}
+          </button>
+        )}
         <div className={`grid gap-6 ${isImageSearchMode ? '' : 'lg:grid-cols-5'}`}>
           {/* Sidebar - Filters */}
-          {!isImageSearchMode && <div className="lg:col-span-1">
+          {!isImageSearchMode && <div className={`lg:col-span-1 ${isMobileFilterOpen ? 'block' : 'hidden'} lg:block`}>
             <div className="sticky top-24 space-y-4 bg-white rounded-lg p-4 border border-slate-200">
               {/* Filter Header */}
               <div className="flex items-center justify-between pb-4 border-b">
@@ -477,7 +489,7 @@ export function CategoryPage({
               </div>
             ) : (
               <>
-                <div className={`gap-4 mb-8 ${viewMode === 'grid' ? 'grid sm:grid-cols-2 lg:grid-cols-4' : 'space-y-3'}`}>
+                <div className={`gap-3 sm:gap-4 mb-8 ${viewMode === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-3'}`}>
                   {displayProducts.map((item) => (
                     <ProductCard
                       key={item.productId}

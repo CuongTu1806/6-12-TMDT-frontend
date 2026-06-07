@@ -318,7 +318,7 @@ export function ProductDetailPage({
           {shopProducts.length === 0 ? (
             <p className="mt-4 text-sm text-slate-500">Shop nay chua co them san pham khac</p>
           ) : (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
               {shopProducts.map((relatedProduct) => (
                 <ProductCard
                   key={relatedProduct.productId}

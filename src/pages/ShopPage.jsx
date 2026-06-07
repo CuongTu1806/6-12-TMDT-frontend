@@ -187,7 +187,7 @@ export function ShopPage({
                       <p className="mt-1 text-sm text-slate-500">{group.items.length} san pham trong danh muc nay</p>
                     </div>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
                     {group.items.map((product) => (
                       <ProductCard
                         key={product.productId}

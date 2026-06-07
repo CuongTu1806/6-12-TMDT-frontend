@@ -107,30 +107,30 @@ export function MarketHeader({
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto max-w-6xl px-4">
-        <div className="flex items-center justify-between gap-4 py-3">
-          <button type="button" onClick={onGoHome} className="flex items-center gap-2 text-base font-extrabold tracking-tight text-blue-700">
+        <div className="flex items-center justify-between gap-2 py-3">
+          <button type="button" onClick={onGoHome} className="flex shrink-0 items-center gap-2 text-base font-extrabold tracking-tight text-blue-700">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-sm">M</span>
-            {title || 'Marketplace Pro'}
+            <span className="hidden sm:inline">{title || 'Marketplace Pro'}</span>
           </button>
 
-          <div className="flex items-center gap-2 text-sm sm:gap-3">
+          <div className="flex items-center gap-1.5 text-sm sm:gap-2">
             {session?.username ? (
               <>
-                <span className="hidden text-slate-600 sm:inline">Xin chao, {session.username}</span>
-                <button type="button" onClick={onOpenOrders} className="hidden rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold sm:inline">
+                <span className="hidden max-w-[100px] truncate text-slate-600 md:inline">Xin chao, {session.username}</span>
+                <button type="button" onClick={onOpenOrders} className="hidden rounded-full border border-slate-300 px-2.5 py-1.5 text-xs font-semibold sm:inline">
                   Don mua
                 </button>
                 {hasAdminAccess && (
-                  <button type="button" onClick={onOpenAdmin} className="rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
+                  <button type="button" onClick={onOpenAdmin} className="rounded-full border border-violet-300 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-700">
                     Quan tri
                   </button>
                 )}
                 {hasSellerAccess && (
-                  <button type="button" onClick={onOpenSeller} className="hidden rounded-full border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 sm:inline">
+                  <button type="button" onClick={onOpenSeller} className="hidden rounded-full border border-blue-300 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 sm:inline">
                     Quan ly shop
                   </button>
                 )}
-                <button type="button" onClick={onLogout} className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold">
+                <button type="button" onClick={onLogout} className="rounded-full border border-slate-300 px-2.5 py-1.5 text-xs font-semibold">
                   Dang xuat
                 </button>
               </>
