@@ -105,6 +105,16 @@ export async function updateOrderStatus(orderId, payload) {
   })
 }
 
+// GET /api/seller/statistics/advanced?from=&to=
+// Returns: actualRevenue, topSellingProducts, revenueComparison, averageMetrics
+export async function getSellerAdvancedStatistics(from, to) {
+  const params = new URLSearchParams()
+  if (from) params.set('from', from)
+  if (to)   params.set('to', to)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return sellerFetch(`/statistics/advanced${query}`)
+}
+
 export async function getSellerRevenue(from, to) {
   const params = new URLSearchParams()
   if (from) params.set('from', from)
