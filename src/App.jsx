@@ -477,26 +477,18 @@ function App() {
     )
   }
 
+  let content;
   if (currentPage === 'admin') {
-    return (
-      <>
-        <AdminPage
-          session={session}
-          onLogout={handleLogoutLocal}
-          onBackHome={() => setCurrentPage('home')}
-          onNotify={updateToast}
-        />
-        {toast.type !== 'idle' ? (
-          <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border bg-white px-4 py-3 text-sm shadow-xl">
-            <p className={toast.type === 'success' ? 'text-emerald-700' : 'text-rose-700'}>{toast.text}</p>
-          </div>
-        ) : null}
-      </>
+    content = (
+      <AdminPage
+        session={session}
+        onLogout={handleLogoutLocal}
+        onBackHome={() => setCurrentPage('home')}
+        onNotify={updateToast}
+      />
     )
-  }
-
-  if (currentPage === 'product' && selectedProductId) {
-    return (
+  } else if (currentPage === 'product' && selectedProductId) {
+    content = (
       <ProductDetailPage
         productId={selectedProductId}
         {...commonNav}
@@ -515,20 +507,16 @@ function App() {
         }}
       />
     )
-  }
-
-  if (currentPage === 'shop' && selectedShopId) {
-    return (
+  } else if (currentPage === 'shop' && selectedShopId) {
+    content = (
       <ShopPage
         shopId={selectedShopId}
         {...commonNav}
         onBack={() => setCurrentPage(shopReturnPage || 'home')}
       />
     )
-  }
-
-  if (currentPage === 'cart') {
-    return (
+  } else if (currentPage === 'cart') {
+    content = (
       <CartPage
         {...commonNav}
         onOpenCheckout={(shopId, selectedCartItemIds = []) => {
@@ -540,10 +528,8 @@ function App() {
         onCartUpdated={refreshCartCount}
       />
     )
-  }
-
-  if (currentPage === 'checkout') {
-    return (
+  } else if (currentPage === 'checkout') {
+    content = (
       <CheckoutPage
         shopId={checkoutShopId}
         selectedCartItemIds={checkoutSelectedCartItemIds}
@@ -559,14 +545,10 @@ function App() {
         }}
       />
     )
-  }
-
-  if (currentPage === 'orders') {
-    return <OrdersPage {...commonNav} />
-  }
-
-  if (currentPage === 'category' && selectedCategoryForPage) {
-    return (
+  } else if (currentPage === 'orders') {
+    content = <OrdersPage {...commonNav} />
+  } else if (currentPage === 'category' && selectedCategoryForPage) {
+    content = (
       <CategoryPage
         categoryId={selectedCategoryForPage.id}
         categoryName={selectedCategoryForPage.name}
@@ -592,10 +574,8 @@ function App() {
         }}
       />
     )
-  }
-
-  return (
-    <>
+  } else {
+    content = (
       <HomePage
         {...commonNav}
         onOpenCategoryPage={(id, name) => {
@@ -618,7 +598,12 @@ function App() {
         }}
         onAddToCart={handleAddToCart}
       />
+    )
+  }
 
+  return (
+    <>
+      {content}
       {toast.type === 'idle' ? null : (
         <div className="fixed bottom-5 right-5 z-50 max-w-sm rounded-xl border bg-white px-4 py-3 text-sm shadow-xl">
           <p className={toast.type === 'success' ? 'text-emerald-700' : 'text-rose-700'}>{toast.text}</p>

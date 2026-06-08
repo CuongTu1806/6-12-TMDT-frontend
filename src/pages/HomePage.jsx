@@ -273,14 +273,16 @@ export function HomePage({
               Xem tat ca
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+          <div className="grid grid-cols-4 gap-3 md:grid-cols-8">
             {isCategoriesLoading ? <p className="col-span-full text-sm text-slate-500">Dang tai danh muc...</p> : null}
-            {categories.map((category) => (
+            {categories.slice(0, 16).map((category, index) => (
               <button
                 key={category.categoryId}
                 type="button"
                 onClick={() => openCategoryPage(category.categoryId, category.categoryName)}
-                className="group overflow-hidden rounded-2xl p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                className={`group overflow-hidden rounded-2xl p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${
+                  index >= 8 ? 'hidden md:block' : ''
+                }`}
               >
                 {(() => {
                   const { gradient, imageUrl } = getCategoryBackground(category.categoryId, category.categoryName)
